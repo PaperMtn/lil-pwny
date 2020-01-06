@@ -3,3 +3,5 @@
 src/additional_matches.txt
 src/duplicate_passwords.txt
 src/HIBP_matches.txt
+__pycache__
+*.pyc

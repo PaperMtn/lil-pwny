@@ -1,9 +1,9 @@
 import multiprocessing as mp
 import itertools
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 import argparse
-import hash_generator
+import hashing
 
 
 def import_ad_hashes(ad_hash_path):
@@ -184,17 +184,13 @@ def main():
         print('Loading additional hashes dictionary...')
 
         # Read the hash list into memory for faster searching
-        additional_content = hash_generator.get_hashes(additional_password_file)
+        additional_content = hashing.get_hashes(additional_password_file)
         additional_lines = additional_content.count(' ')
 
         print('Comparing {0} Active Directory users against {1} additional password hashes...'.format(ad_lines,
                                                                                                       additional_lines))
         multi_pro_search(ad_users, additional_content, './additional_matches.txt')
         additional_count = len(open('./additional_matches.txt').readlines())
-
-    # print('Comparing {0} AD users against {1} known compromised passwords...'.format(ad_lines, hibp_lines))
-    # multi_pro_search(ad_users, content, './HIBP_matches.txt')
-    # hibp_count = len(open('./HIBP_matches.txt').readlines())
 
     if duplicates:
         print('Finding users with duplicate passwords...')
