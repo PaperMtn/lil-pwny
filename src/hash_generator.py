@@ -22,5 +22,7 @@ def get_hashes(input_file):
         for item in f:
             pwds.append(hashify(item.strip()))
 
-    return pwds
+    output = ' '.join(pwds)
+
+    return output
 

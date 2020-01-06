@@ -3,9 +3,7 @@ import itertools
 import time
 from datetime import datetime, timedelta
 import argparse
-
-
-# import src.hash_generator
+import hash_generator
 
 
 def import_ad_hashes(ad_hash_path):
@@ -30,9 +28,12 @@ def import_hibp_hashes(hibp_hash_path):
     hibp = []
     with open(hibp_hash_path) as h_infile:
         for line in nonblank_lines(h_infile):
-            hibp.append(line.strip())
+            temp = line.split(':')
+            hibp.append(temp[0])
 
-    return hibp
+    output = " ".join(hibp)
+
+    return output
 
 
 def find_duplicates(ad_hash_dict, output_file_path):
@@ -121,14 +122,17 @@ def main():
     start = time.time()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-hibp', '--hibp', help='The HIBP .txt file of NTLM hashes', dest='hibp', required=True)
-    parser.add_argument('-a', '--a', help='.txt file containing additional passwords to check for', dest='a')
-    parser.add_argument('-ad-hashes', '-ad', '--ad', help='The NTLM hashes from of AD users', dest='ad_hashes',
+    parser.add_argument('-hibp-path', '--hibp-path', help='The HIBP .txt file of NTLM hashes', dest='hibp',
                         required=True)
-    parser.add_argument('-duplicates', '-d', '--d', action='store_true',
+    parser.add_argument('-a', '--a', help='.txt file containing additional passwords to check for', dest='a')
+    parser.add_argument('-ad-hashes-path', '-ad', '--ad', help='The NTLM hashes from of AD users', dest='ad_hashes',
+                        required=True)
+    parser.add_argument('-find-duplicates', '-d', '--d', action='store_true',
                         help='Output a list of duplicate password users')
     parser.add_argument('-memory', '-m', '--m', action='store_true', dest='m',
-                        help='Load HIBP hash list into memory (over 20GB RAM required)')
+                        help='Load HIBP hash list into memory (over 24GB RAM required)')
+    parser.add_argument('-out-path', '-o', '--o', dest='output',
+                        help='Set output path. Uses working dir if not set')
 
     args = parser.parse_args()
     hibp_file = args.hibp
@@ -136,58 +140,71 @@ def main():
     ad_hash_file = args.ad_hashes
     duplicates = args.d
     memory = args.m
+    # TODO Implement output path
+    out_path = args.output
 
     additional_count = 0
-    dup_count = 0
 
     print("""
-    +-+-+-+-+-+-+ +-+-+-+-+
-    |L|i|t|t|l|e| |P|w|n|y|
-    +-+-+-+-+-+-+ +-+-+-+-+
+           __    _ __  __  __        ____                      
+          / /   (_) /_/ /_/ /__     / __ \_      ______  __  __
+         / /   / / __/ __/ / _ \   / /_/ / | /| / / __ \/ / / /
+        / /___/ / /_/ /_/ /  __/  / ____/| |/ |/ / / / / /_/ / 
+       /_____/_/\__/\__/_/\___/  /_/     |__/|__/_/ /_/\__, /  
+                                                      /____/   
     """)
-
-    if memory:
-        print('Loading HIBP hash dictionary into memory...')
-        # Read the HIBP list into memory for faster searching
-        f = open(hibp_file)
-        content = f.read()
-        hibp_lines = content.count('\n')
-    else:
-        print('Loading HIBP hash dictionary...')
-        content = import_hibp_hashes(hibp_file)
-        hibp_lines = len(content)
 
     print('Loading AD user hashes...')
     ad_users = import_ad_hashes(ad_hash_file)
     ad_lines = len(ad_users)
 
+    if memory:
+        # TODO error checking for OS error [Errno 22]
+        print('Loading HIBP hash dictionary into memory...')
+        # Read the HIBP list into memory for faster searching
+        f = open(hibp_file)
+        content = f.read()
+        hibp_lines = content.count('\n')
+
+        print('Comparing {0} Active Directory users against {1} known compromised passwords...'.format(ad_lines,
+                                                                                                       hibp_lines))
+        multi_pro_search(ad_users, content, './HIBP_matches.txt')
+        hibp_count = len(open('./HIBP_matches.txt').readlines())
+    else:
+        print('Loading HIBP hash dictionary...')
+        content = import_hibp_hashes(hibp_file)
+        hibp_lines = content.count(' ')
+
+        print('Comparing {0} Active Directory users against {1} known compromised passwords...'.format(ad_lines,
+                                                                                                       hibp_lines))
+        multi_pro_search(ad_users, content, './HIBP_matches.txt')
+        hibp_count = len(open('./HIBP_matches.txt').readlines())
+
     if additional_password_file:
         print('Loading additional hashes dictionary...')
 
         # Read the hash list into memory for faster searching
-        f_additional = open(additional_password_file)
-        additional_content = f_additional.read()
-        additional_lines = additional_content.count('\n')
+        additional_content = hash_generator.get_hashes(additional_password_file)
+        additional_lines = additional_content.count(' ')
 
-        print('Comparing {0} AD users against {1} additional password hashes...'.format(ad_lines, additional_lines))
+        print('Comparing {0} Active Directory users against {1} additional password hashes...'.format(ad_lines,
+                                                                                                      additional_lines))
         multi_pro_search(ad_users, additional_content, './additional_matches.txt')
         additional_count = len(open('./additional_matches.txt').readlines())
 
-    print('Comparing {0} AD users against {1} known compromised passwords...'.format(ad_lines, hibp_lines))
-    multi_pro_search(ad_users, content, './HIBP_matches.txt')
-    hibp_count = len(open('./HIBP_matches.txt').readlines())
+    # print('Comparing {0} AD users against {1} known compromised passwords...'.format(ad_lines, hibp_lines))
+    # multi_pro_search(ad_users, content, './HIBP_matches.txt')
+    # hibp_count = len(open('./HIBP_matches.txt').readlines())
 
     if duplicates:
         print('Finding users with duplicate passwords...')
         find_duplicates(ad_users, './duplicate_passwords.txt')
 
-        # dup_count = len(dup_bq_list)
-
     # Time taken for the audit to run
     end = time.time()
     time_taken = end - start
 
-    total_comp_count = additional_count + hibp_count + dup_count
+    total_comp_count = additional_count + hibp_count
 
     print('Audit completed \n'
           'Total compromised passwords: {}\n'
