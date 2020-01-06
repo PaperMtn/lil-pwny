@@ -1,5 +1,7 @@
 import multiprocessing as mp
 import itertools
+import os
+import sys
 import time
 from datetime import timedelta
 import argparse
@@ -118,7 +120,6 @@ def write_output(out_path, out_list):
 
 
 def main():
-    # start timer
     start = time.time()
 
     parser = argparse.ArgumentParser()
@@ -140,7 +141,6 @@ def main():
     ad_hash_file = args.ad_hashes
     duplicates = args.d
     memory = args.m
-    # TODO Implement output path
     out_path = args.output
 
     additional_count = 0
@@ -158,47 +158,77 @@ def main():
     ad_users = import_ad_hashes(ad_hash_file)
     ad_lines = len(ad_users)
 
-    if memory:
-        # TODO error checking for OS error [Errno 22]
-        print('Loading HIBP hash dictionary into memory...')
-        # Read the HIBP list into memory for faster searching
-        f = open(hibp_file)
-        content = f.read()
-        hibp_lines = content.count('\n')
-
-        print('Comparing {0} Active Directory users against {1} known compromised passwords...'.format(ad_lines,
-                                                                                                       hibp_lines))
-        multi_pro_search(ad_users, content, './HIBP_matches.txt')
-        hibp_count = len(open('./HIBP_matches.txt').readlines())
+    if out_path:
+        if not os.path.exists(out_path):
+            out_path = os.getcwd()
+            print('Not a valid output path, defaulting to current dir: {}'.format(out_path))
     else:
-        print('Loading HIBP hash dictionary...')
-        content = import_hibp_hashes(hibp_file)
-        hibp_lines = content.count(' ')
+        out_path = os.getcwd()
 
-        print('Comparing {0} Active Directory users against {1} known compromised passwords...'.format(ad_lines,
-                                                                                                       hibp_lines))
-        multi_pro_search(ad_users, content, './HIBP_matches.txt')
-        hibp_count = len(open('./HIBP_matches.txt').readlines())
+    if memory:
+        try:
+            print('Loading HIBP hash dictionary into memory...')
+            f = open(hibp_file)
+            content = f.read()
+            hibp_lines = content.count('\n')
+
+            print('Comparing {0} Active Directory users against {1} known compromised passwords...'.format(ad_lines,
+                                                                                                           hibp_lines))
+            multi_pro_search(ad_users, content, '{}/HIBP_matches.txt'.format(out_path))
+            hibp_count = len(open('{}/HIBP_matches.txt'.format(out_path)).readlines())
+            print('HIBP matches output to: {}/HIBP_matches.txt\n'
+                  '-----'.format(out_path))
+        except FileNotFoundError as not_found:
+            print('No such file or directory: {}'.format(not_found.filename))
+            sys.exit()
+        except OSError:
+            print('Not enough memory available\n'
+                  'Rerun the application without the -m flag')
+            sys.exit()
+    else:
+        try:
+            print('Loading HIBP hash dictionary...')
+            content = import_hibp_hashes(hibp_file)
+            hibp_lines = content.count(' ')
+
+            print('Comparing {0} Active Directory users against {1} known compromised passwords...'.format(ad_lines,
+                                                                                                           hibp_lines))
+            multi_pro_search(ad_users, content, '{}/HIBP_matches.txt'.format(out_path))
+            hibp_count = len(open('{}/HIBP_matches.txt'.format(out_path)).readlines())
+            print('HIBP matches output to: {}/HIBP_matches.txt\n'
+                  '-----'.format(out_path))
+        except FileNotFoundError as not_found:
+            print('No such file or directory: {}'.format(not_found.filename))
+            sys.exit()
 
     if additional_password_file:
-        print('Loading additional hashes dictionary...')
+        try:
+            print('Loading additional hashes dictionary...')
 
-        # Read the hash list into memory for faster searching
-        additional_content = hashing.get_hashes(additional_password_file)
-        additional_lines = additional_content.count(' ')
+            additional_content = hashing.get_hashes(additional_password_file)
+            additional_lines = additional_content.count(' ')
 
-        print('Comparing {0} Active Directory users against {1} additional password hashes...'.format(ad_lines,
-                                                                                                      additional_lines))
-        multi_pro_search(ad_users, additional_content, './additional_matches.txt')
-        additional_count = len(open('./additional_matches.txt').readlines())
+            print('Comparing {0} Active Directory users against {1} additional password hashes...'.format(ad_lines,
+                                                                                                          additional_lines))
+            multi_pro_search(ad_users, additional_content, '{}/additional_matches.txt'.format(out_path))
+            additional_count = len(open('{}/additional_matches.txt'.format(out_path)).readlines())
+            print('Additional matches output to: {}/additional_matches.txt\n'
+                  '-----'.format(out_path))
+        except FileNotFoundError as not_found:
+            print('No such file or directory: {}'.format(not_found.filename))
+            sys.exit()
 
     if duplicates:
-        print('Finding users with duplicate passwords...')
-        find_duplicates(ad_users, './duplicate_passwords.txt')
+        try:
+            print('Finding users with duplicate passwords...')
+            find_duplicates(ad_users, '{}/duplicate_passwords.txt'.format(out_path))
+            print('Duplicate password matches output to: {}/duplicate_passwords.txt\n'
+                  '-----'.format(out_path))
+        except FileNotFoundError as not_found:
+            print('No such file or directory: {}'.format(not_found.filename))
+            sys.exit()
 
-    # Time taken for the audit to run
-    end = time.time()
-    time_taken = end - start
+    time_taken = time.time() - start
 
     total_comp_count = additional_count + hibp_count
 
@@ -206,7 +236,8 @@ def main():
           'Total compromised passwords: {}\n'
           'Passwords matching HIBP: {}\n'
           'Passwords matching additional dictionary: {}\n'
-          'Time taken: {}'.format(total_comp_count, hibp_count, additional_count, str(timedelta(seconds=time_taken))))
+          'Time taken: {}\n'
+          '-----'.format(total_comp_count, hibp_count, additional_count, str(timedelta(seconds=time_taken))))
 
 
 if __name__ == '__main__':
