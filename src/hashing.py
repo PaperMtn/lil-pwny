@@ -1,7 +1,7 @@
 import binascii
 import hashlib
 
-"""This script takes an input file of passwords and produces 
+"""This module takes an input file of passwords and produces 
 an output file of the NTLM hashes of those passwords"""
 
 
@@ -14,8 +14,7 @@ def hashify(input_string):
 
 
 def get_hashes(input_file):
-    """Reads the input file of passwords and returns them line by
-    line in a list"""
+    """Reads the input file of passwords and returns them in a String"""
 
     pwds = []
     with open(input_file, 'r') as f:
