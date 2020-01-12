@@ -1,7 +1,7 @@
 # Lil Pwny
 ![Python 2.7 and 3 compatible](https://img.shields.io/badge/python-2.7%2C%203.x-blue.svg)
-![PyPI version](https://img.shields.io/pypi/v/)
-![License: MIT](https://img.shields.io/pypi/l/)
+![PyPI version](https://img.shields.io/pypi/v/lil-pwny.svg)
+![License: MIT](https://img.shields.io/pypi/l/lil-pwny.svg)
 
 A multiprocessing approach to auditing Active Directory passwords using Python.
 

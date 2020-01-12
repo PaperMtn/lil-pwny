@@ -18,10 +18,9 @@ setup(
         'Programming Language :: Python :: 3.7',
     ],
     author='PaperMtn',
-    author_email='',
+    author_email='ab10adg@gmail.com',
     long_description='A multiprocessing approach to auditing Active Directory passwords against HIBP using Python.',
     description='Auditing Active Directory Passwords ',
-    # scripts=['src/password_audit.py']
     entry_points={
         'console_scripts': ['lil-pwny=src:main']
     }
