@@ -16,7 +16,7 @@ def main():
     parser.add_argument('-a', '--a', help='.txt file containing additional passwords to check for', dest='a')
     parser.add_argument('-ad', '--ad-hashes', help='The NTLM hashes from of AD users', dest='ad_hashes',
                         required=True)
-    parser.add_argument('-d','--find-duplicates', action='store_true',
+    parser.add_argument('-d','--find-duplicates', action='store_true', dest='d',
                         help='Output a list of duplicate password users')
     parser.add_argument('-m','--memory', action='store_true', dest='m',
                         help='Load HIBP hash list into memory (over 24GB RAM required)')
