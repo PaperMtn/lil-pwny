@@ -21,7 +21,7 @@ setup(
         'Programming Language :: Python :: 3.7',
     ],
     author='PaperMtn',
-    author_email='ab10adg@gmail.com',
+    author_email='papermtn@protonmail.com',
     long_description=README,
     long_description_content_type='text/markdown',
     description='Auditing Active Directory Passwords ',
