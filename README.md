@@ -5,13 +5,15 @@
 
 A multiprocessing approach to auditing Active Directory passwords using Python.
 
-## About
+## About Lil Pwny
 
-A Python application to perform an offline audit of NTLM hashes of users' passwords, recovered from Active Directory, against known compromised passwords from Have I Been Pwned. The usernames of any accounts matching HIBP will be returned in a .txt file
+Lil Pwny is a Python application to perform an offline audit of NTLM hashes of users' passwords, recovered from Active Directory, against known compromised passwords from Have I Been Pwned. The usernames of any accounts matching HIBP will be returned in a .txt file
 
 There are also additional features:
 - Ability to provide a list of your own passwords to check AD users against. This allows you to check user passwords against passwords relevant to your organisation that you suspect people might be using. These are NTLM hashed, and AD hashes are then compared with this as well as the HIBP hashes.
 - Return a list of accounts using the same passwords. Useful for finding users using the same password for their administrative and standard accounts.
+
+More information about Lil Pwny can be found [on my blog](https://papermtn.co.uk/)
 
 ## Recommendations
 This application was developed to ideally run on high resource infrastructure to make the most of Python multiprocessing. It will run on desktop level hardware, but the more cores you use, the faster the audit will run.
