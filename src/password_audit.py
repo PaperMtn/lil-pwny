@@ -13,7 +13,8 @@ def import_ad_hashes(ad_hash_path):
             temp = line.split(':')
             uname = temp[0].upper()
             phash = temp[1].strip().upper()
-            users[uname] = phash
+            if not uname.endswith('$') and phash:
+                users[uname] = phash
     return users
 
 
