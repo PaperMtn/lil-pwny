@@ -6,7 +6,7 @@ with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md'))
 
 setup(
     name='lil-pwny',
-    version='1.0.1',
+    version='1.0.2',
     url='https://github.com/PaperMtn/little-pwny',
     license='GPL-3.0',
     classifiers=[
