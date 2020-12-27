@@ -1,43 +1,28 @@
 import multiprocessing as mp
 import itertools
 
+from lil_pwny import logger
 
-def import_ad_hashes(ad_hash_path):
+
+def import_hashes(hash_path):
     """Read contents of the AD input file and return them line
-    by line in a list"""
+    by line in a dict"""
 
-    users = {}
-    with open(ad_hash_path) as u_infile:
-        for line in nonblank_lines(u_infile):
-            line.strip()
+    output_dict = {}
+    with open(hash_path) as infile:
+        for line in nonblank_lines(infile):
+            line.rstrip()
             temp = line.split(':')
-            uname = temp[0].upper()
-            phash = temp[1].strip().upper()
-            if not uname.endswith('$') and phash:
-                users[uname] = phash
-    return users
+            output_dict[temp[0].upper()] = temp[1].strip().upper()
+    return output_dict
 
 
-def import_hibp_hashes(hibp_hash_path):
-    """Read contents of the HIBP input file and return them line
-    by line in a list"""
-
-    hibp = []
-    with open(hibp_hash_path) as h_infile:
-        for line in nonblank_lines(h_infile):
-            temp = line.split(':')
-            hibp.append(temp[0])
-
-    output = " ".join(hibp)
-
-    return output
-
-
-def find_duplicates(ad_hash_dict, output_file_path):
+def find_duplicates(ad_hash_dict):
     """Returns users using the same hash in the input file. Outputs
     a file grouping all users of a hash being used more than once"""
 
     flipped = {}
+    outlist = []
 
     for key, value in ad_hash_dict.items():
         if value not in flipped:
@@ -45,11 +30,20 @@ def find_duplicates(ad_hash_dict, output_file_path):
         else:
             flipped[value].append(key)
 
-    with open(output_file_path, 'w+') as f:
-        for key, value in flipped.items():
-            if len(list(value)) > 1:
-                temp = '{} : {}'.format(str(key), str(value))
-                f.write(temp + '\n')
+    for key, value in flipped.items():
+        if len(list(value)) > 1:
+            user_list = []
+            for v in value:
+                user_list.append({
+                    'username': v,
+                })
+            output = {
+                'hash': str(key),
+                'users': user_list
+            }
+            outlist.append(output)
+
+    return outlist
 
 
 def worker(ad_users, hibp, result):
@@ -57,8 +51,12 @@ def worker(ad_users, hibp, result):
     and adds matches to a list"""
 
     for k, v in ad_users.items():
-        if v in hibp:
-            result.append(k + ':' + v)
+        if hibp.get(v):
+            result.append({
+                'username': k,
+                'hash': v,
+                'matches_in_hibp': hibp.get(v)
+            })
 
     return result
 
@@ -72,7 +70,7 @@ def nonblank_lines(f):
             yield line
 
 
-def multi_pro_search(userlist, hash_dictionary, out_path):
+def multi_pro_search(log_handler, userlist, hash_dictionary):
     """Uses multiprocessing to split the userlist into (number of cores -1) amount
     of dictionaries of equal size, and search these against the HIBP list.
     Joins these together and outputs a list of matching users"""
@@ -80,7 +78,11 @@ def multi_pro_search(userlist, hash_dictionary, out_path):
     result = mp.Manager().list()
 
     chunks = mp.cpu_count() - 1
-    print('{} cores being utilised'.format(chunks))
+
+    if isinstance(log_handler, logger.StdoutLogger):
+        log_handler.log_info('{} cores being utilised'.format(chunks))
+    else:
+        print('{} cores being utilised'.format(chunks))
 
     # Make sure each chunk is equal, remainder is added to last chunk
     chunk_size = round(len(userlist) / chunks)
@@ -100,15 +102,4 @@ def multi_pro_search(userlist, hash_dictionary, out_path):
     for process in processes:
         process.join()
 
-    write_output(out_path, result)
-
-    return result
-
-
-def write_output(out_path, out_list):
-    """Writes the inputted list to a .txt file in the given path"""
-
-    with open(out_path, 'w+') as f:
-        for item in out_list:
-            username = item.split(':', 1)[0]
-            f.write(username + '\n')
+    return result._getvalue()
