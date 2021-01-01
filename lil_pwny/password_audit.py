@@ -82,7 +82,7 @@ def _divide_blocks(filepath, size=1024 * 1024 * 1000, skip_lines=-1):
 
     blocks = []
     file_end = os.path.getsize(filepath)
-    with open(filepath, "rb") as f:
+    with open(filepath, 'rb') as f:
         if skip_lines > 0:
             for i in range(skip_lines):
                 f.readline()
@@ -115,7 +115,7 @@ def _parallel_process_block(block_data):
     block_start, block_size, filepath, function = block_data[:4]
     func_args = block_data[4:]
     block_results = []
-    with open(filepath, "rb") as f:
+    with open(filepath, 'rb') as f:
         f.seek(block_start)
         cont = f.read(block_size).decode(encoding='utf-8')
         lines = cont.splitlines()

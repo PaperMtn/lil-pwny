@@ -57,13 +57,18 @@ def main():
 
         print('*** Lil Pwny started execution ***')
         print('Loading AD user hashes...')
-        ad_users = password_audit.import_users(ad_hash_file)
-        ad_lines = 0
-        for ls in ad_users.values():
-            ad_lines += len(ls)
-
         try:
-            print('Comparing {} AD users against HIBP compromised passwords...'.format(ad_lines))
+            ad_users = password_audit.import_users(ad_hash_file)
+            ad_lines = 0
+            for ls in ad_users.values():
+                ad_lines += len(ls)
+        except FileNotFoundError as not_found:
+            raise Exception('AD user file not found: {}'.format(not_found.filename))
+        except Exception as e:
+            raise e
+
+        print('Comparing {} AD users against HIBP compromised passwords...'.format(ad_lines))
+        try:
             hibp_results = password_audit.search(OUTPUT_LOGGER, hibp_file, ad_hash_file)
             hibp_count = len(hibp_results)
             for hibp_match in hibp_results:
