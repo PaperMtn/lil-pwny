@@ -1,8 +1,8 @@
 import os
-import sys
 import time
 import builtins
 import argparse
+import uuid
 from datetime import timedelta
 
 from lil_pwny import hashing
@@ -57,35 +57,53 @@ def main():
 
         print('*** Lil Pwny started execution ***')
         print('Loading AD user hashes...')
-        ad_users = password_audit.import_hashes(ad_hash_file)
-        ad_lines = len(ad_users)
+        try:
+            ad_users = password_audit.import_users(ad_hash_file)
+            ad_lines = 0
+            for ls in ad_users.values():
+                ad_lines += len(ls)
+        except FileNotFoundError as not_found:
+            raise Exception('AD user file not found: {}'.format(not_found.filename))
+        except Exception as e:
+            raise e
 
-        print('Loading HIBP hash dictionary...')
-
-        hibp_hashes = password_audit.import_hashes(hibp_file)
-        hibp_lines = len(hibp_hashes)
-
-        print('Comparing {} AD users against {} known compromised passwords...'.format(ad_lines, hibp_lines))
-        hibp_results = password_audit.multi_pro_search(OUTPUT_LOGGER, ad_users, hibp_hashes)
-        hibp_count = len(hibp_results)
-        for hibp_match in hibp_results:
-            if obfuscate:
-                hibp_match['hash'] = hashing.obfuscate(hibp_match.get('hash'))
-                hibp_match['obfuscated'] = 'True'
-            else:
-                hibp_match['obfuscated'] = 'False'
-            OUTPUT_LOGGER.log_notification(hibp_match, 'hibp')
+        print('Comparing {} AD users against HIBP compromised passwords...'.format(ad_lines))
+        try:
+            hibp_results = password_audit.search(OUTPUT_LOGGER, hibp_file, ad_hash_file)
+            hibp_count = len(hibp_results)
+            for hibp_match in hibp_results:
+                if obfuscate:
+                    hibp_match['hash'] = hashing.obfuscate(hibp_match.get('hash'))
+                    hibp_match['obfuscated'] = 'True'
+                else:
+                    hibp_match['obfuscated'] = 'False'
+                OUTPUT_LOGGER.log_notification(hibp_match, 'hibp')
+        except FileNotFoundError as not_found:
+            raise Exception('HIBP file not found: {}'.format(not_found.filename))
+        except Exception as e:
+            raise e
 
         if custom_passwords:
             try:
-                print('Loading additional custom hashes dictionary...')
-
+                # Import custom strings from file and convert them to NTLM hashes
                 custom_content = hashing.get_hashes(custom_passwords)
+
+                # Create a tmp file to store the converted hashes and pass to the search function
+                # Filename is a randomly generated uuid
+                f = open('{}.tmp'.format(str(uuid.uuid4().hex)), 'w')
+                for h in custom_content:
+                    # Replicate HIBP format: "hash:occurrence"
+                    f.write('{}:{}'.format(h, 0) + '\n')
+                f.close()
 
                 print('Comparing {} Active Directory users against {} custom password hashes...'
                       .format(ad_lines, len(custom_content)))
-                custom_matches = password_audit.multi_pro_search(OUTPUT_LOGGER, ad_users, custom_content)
+                custom_matches = password_audit.search(OUTPUT_LOGGER, f.name, ad_hash_file)
                 custom_count = len(custom_matches)
+
+                # Remove the tmp file
+                os.remove(f.name)
+
                 for custom_match in custom_matches:
                     if obfuscate:
                         custom_match['hash'] = hashing.obfuscate(custom_match.get('hash'))
@@ -94,8 +112,9 @@ def main():
                         custom_match['obfuscated'] = 'False'
                     OUTPUT_LOGGER.log_notification(custom_match, 'custom')
             except FileNotFoundError as not_found:
-                print('No such file or directory: {}'.format(not_found.filename))
-                sys.exit()
+                raise Exception('Custom password file not found: {}'.format(not_found.filename))
+            except Exception as e:
+                raise e
 
         if duplicates:
             try:
@@ -109,12 +128,10 @@ def main():
                     else:
                         duplicate_match['obfuscated'] = 'False'
                     OUTPUT_LOGGER.log_notification(duplicate_match, 'duplicate')
-            except FileNotFoundError as not_found:
-                print('No such file or directory: {}'.format(not_found.filename))
-                sys.exit()
+            except Exception as e:
+                raise e
 
         time_taken = time.time() - start
-
         total_comp_count = custom_count + hibp_count
 
         print('Audit completed')

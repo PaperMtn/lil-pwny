@@ -4,7 +4,13 @@ import secrets
 
 
 def hashify(input_string):
-    """Converts the input string to a NTLM hash and returns the hash"""
+    """Converts the input string to a NTLM hash and returns the hash
+
+    Parameters:
+        input_string: string to be converted to NTLM hash
+    Returns:
+        Converted NTLM hash
+    """
 
     output = hashlib.new('md4', input_string.encode('utf-16le')).digest()
 
@@ -12,7 +18,13 @@ def hashify(input_string):
 
 
 def get_hashes(input_file):
-    """Reads the input file of passwords, converts them to NTLM hashes, and returns them in a String"""
+    """Reads the input file of passwords, converts them to NTLM hashes
+
+    Parameters:
+        input_file: file containing strings to convert to NTLM hashes
+    Returns:
+        Dict that replicates HIBP format: 'hash:occurrence_count'
+    """
 
     output_dict = {}
     with open(input_file, 'r') as f:
@@ -24,7 +36,13 @@ def get_hashes(input_file):
 
 
 def obfuscate(input_hash):
-    """Further hashes the input NTLM hash"""
+    """Further hashes the input NTLM hash with a random salt
+
+    Parameters:
+        input_hash: hash to be obfuscated
+    Returns:
+        String containing obfuscated hash
+    """
 
     output = hashlib.new('md4', (input_hash + secrets.token_hex(8)).encode('utf-16le')).digest()
 

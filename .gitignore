@@ -129,3 +129,4 @@ lil_pwny/additional_matches.txt
 lil_pwny/duplicate_passwords.txt
 lil_pwny/HIBP_matches.txt
 *.json
+lil_pwny/caching_test*.py
