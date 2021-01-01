@@ -10,7 +10,7 @@ __all__ = [
 ]
 
 __title__ = 'Lil Pwny'
-__summary__ = 'A multiprocessing approach to auditing AD passwords using Python'
+__summary__ = 'Fast offline auditing of Active Directory passwords using Python'
 __uri__ = 'https://github.com/PaperMtn/lil-pwny'
 __version__ = '2.0.0'
 __author__ = 'PaperMtn'

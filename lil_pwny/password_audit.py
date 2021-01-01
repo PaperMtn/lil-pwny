@@ -1,105 +1,206 @@
+import gc
+import os
 import multiprocessing as mp
-import itertools
 
 from lil_pwny import logger
 
 
-def import_hashes(hash_path):
-    """Read contents of the AD input file and return them line
-    by line in a dict"""
+def import_users(filepath):
+    """Import Active Directory users from text file into a dict
 
-    output_dict = {}
-    with open(hash_path) as infile:
-        for line in nonblank_lines(infile):
-            line.rstrip()
-            temp = line.split(':')
-            output_dict[temp[0].upper()] = temp[1].strip().upper()
-    return output_dict
+    Parameters:
+        filepath: Path for the AD user file
+    Returns:
+        Dict with the key as the NTLM hash, value is a list containing users matching that hash
+    """
+
+    users = {}
+    with open(filepath) as infile:
+        for u in _nonblank_lines(infile):
+            username, hash = u.strip().split(':')[0].upper(), u.strip().split(':')[1].upper()
+            if not username.endswith('$'):
+                users.setdefault(hash, []).append(username)
+
+    return users
 
 
 def find_duplicates(ad_hash_dict):
     """Returns users using the same hash in the input file. Outputs
-    a file grouping all users of a hash being used more than once"""
+    a file grouping all users of a hash being used more than once
 
-    flipped = {}
+    Parameters:
+        ad_hash_dict: imported AD users as a dict
+    Returns:
+        List of dicts containing results for users using the same password
+    """
+
     outlist = []
-
-    for key, value in ad_hash_dict.items():
-        if value not in flipped:
-            flipped[value] = [key]
-        else:
-            flipped[value].append(key)
-
-    for key, value in flipped.items():
-        if len(list(value)) > 1:
-            user_list = []
-            for v in value:
-                user_list.append({
-                    'username': v,
-                })
+    for u in ad_hash_dict:
+        if u and len(ad_hash_dict.get(u)) > 1:
             output = {
-                'hash': str(key),
-                'users': user_list
+                'hash': u,
+                'users': ad_hash_dict.get(u)
             }
             outlist.append(output)
 
     return outlist
 
 
-def worker(ad_users, hibp, result):
-    """Worker for multiproccessing, compares one list against another
-    and adds matches to a list"""
+def search(log_handler, hibp_path, ad_user_path):
+    users = import_users(ad_user_path)
+    result = mp.Manager().list()
 
-    for k, v in ad_users.items():
-        if hibp.get(v):
+    _multi_pro_search(log_handler, hibp_path, 100, mp.cpu_count(), _worker, [users, result])
+
+    return result._getvalue()
+
+
+def _nonblank_lines(f):
+    """Generator to filter out blank lines from the input list
+
+    Parameters:
+        f: input file
+    Returns:
+        Yields line if it isn't blank
+    """
+
+    for line in f:
+        if line.rstrip():
+            yield line
+
+
+def _divide_blocks(filepath, size=1024 * 1024 * 1000, skip_lines=-1):
+    """Divide the large text file into equal sized blocks, aligned to the start of a line
+
+    Parameters:
+        filepath: Path for the hash file (HIBP or custom)
+        size: size of 1 block in MB
+        skip_lines: number of top lines to skip while processing
+    Returns:
+        List containing the start points for the input file after dividing into blocks
+    """
+
+    blocks = []
+    file_end = os.path.getsize(filepath)
+    with open(filepath, "rb") as f:
+        if skip_lines > 0:
+            for i in range(skip_lines):
+                f.readline()
+
+        block_end = f.tell()
+        count = 0
+        while True:
+            block_start = block_end
+            f.seek(f.tell() + size, os.SEEK_SET)
+            f.readline()
+            block_end = f.tell()
+            blocks.append((block_start, block_end - block_start, filepath))
+            count += 1
+
+            if block_end > file_end:
+                break
+
+    return blocks
+
+
+def _parallel_process_block(block_data):
+    """Carry out worker function on each line in a block
+
+    Parameters:
+        block_data: information on the block to process, start - end etc.
+    Returns:
+        List containing results of the worker on the block
+    """
+
+    block_start, block_size, filepath, function = block_data[:4]
+    func_args = block_data[4:]
+    block_results = []
+    with open(filepath, "rb") as f:
+        f.seek(block_start)
+        cont = f.read(block_size).decode(encoding='utf-8')
+        lines = cont.splitlines()
+
+        for i, line in enumerate(lines):
+            output = function(line, *func_args)
+            if output is not None:
+                block_results.append(output)
+
+    return block_results
+
+
+def _multi_pro_search(log_handler, filepath, block_size, cores, worker_function, worker_function_args, skip_lines=0, outfile=None):
+    """Breaks the [HIBP|custom passwords] file into blocks and uses multiprocessing to iterate through them and return
+     any matches against AD users.
+
+    Parameters:
+        log_handler: logger instance for outputting
+        input_file_path: path to input file
+        block_size: size of 1 block in MB
+        cores: number of processes
+        skip_lines: number of top lines to skip while processing
+        worker_function: worker function that will carry out processing
+        worker_function_args: arguments for the worker function
+        outfile: output file (optional)
+    Returns:
+        List of users matching the given password dictionary file (HIBP or custom)
+    """
+
+    jobs = _divide_blocks(filepath, 1024 * 1024 * block_size, skip_lines)
+    jobs = [list(j) + [worker_function] + worker_function_args for j in jobs]
+
+    if isinstance(log_handler, logger.StdoutLogger):
+        log_handler.log_info('Split into {} parallel jobs '.format(len(jobs)))
+        log_handler.log_info('{} cores being utilised'.format(cores))
+    else:
+        print('Split into {} parallel jobs '.format(len(jobs)))
+        print('{} cores being utilised'.format(cores))
+
+    pool = mp.Pool(cores - 1, maxtasksperchild=1000)
+
+    outputs = []
+    for block_number in range(0, len(jobs), cores - 1):
+        block_results = pool.map(_parallel_process_block, jobs[block_number: block_number + cores - 1])
+
+        for i, subl in enumerate(block_results):
+            for x in subl:
+                if outfile is not None:
+                    print(x, file=outfile)
+                else:
+                    outputs.append(x)
+        del block_results
+        gc.collect()
+
+    pool.close()
+    pool.terminate()
+
+    return outputs
+
+
+def _worker(line, userlist, result):
+    """Worker function that carries out the processing on a line from the HIBP/custom passwords file. Checks to see
+    whether the hash on that line is in the imported AD users. If a match, a dict containing match data is appended
+    to the list shared between processes via multiprocessing
+
+    Parameters:
+        line: line from a block of the hash file
+        userlist: dict containing imported AD user hashes
+        result: multiprocessing list shared between all processes to collect results
+    Returns:
+        List containing dict data of the matching user
+    """
+
+    ntlm_hash, count = line.rstrip().split(':')[0].upper(), line.rstrip().split(':')[1].strip().upper()
+    if userlist.get(ntlm_hash):
+        for u in userlist.get(ntlm_hash):
             result.append({
-                'username': k,
-                'hash': v,
-                'matches_in_hibp': hibp.get(v)
+                'username': u,
+                'hash': ntlm_hash,
+                'matches_in_hibp': count
             })
 
     return result
 
 
-def nonblank_lines(f):
-    """Filter out blank lines from the input file"""
-
-    for l in f:
-        line = l.rstrip()
-        if line:
-            yield line
-
-
-def multi_pro_search(log_handler, userlist, hash_dictionary):
-    """Uses multiprocessing to split the userlist into (number of cores -1) amount
-    of dictionaries of equal size, and search these against the HIBP list.
-    Joins these together and outputs a list of matching users"""
-
-    result = mp.Manager().list()
-
-    chunks = mp.cpu_count() - 1
-
-    if isinstance(log_handler, logger.StdoutLogger):
-        log_handler.log_info('{} cores being utilised'.format(chunks))
-    else:
-        print('{} cores being utilised'.format(chunks))
-
-    # Make sure each chunk is equal, remainder is added to last chunk
-    chunk_size = round(len(userlist) / chunks)
-    items = iter(userlist.items())
-
-    # Creates a list of equal sized dictionaries
-    list_of_chunks = [dict(itertools.islice(items, chunk_size)) for _ in range(chunks - 1)]
-    list_of_chunks.append(dict(items))
-
-    processes = []
-
-    for dic in list_of_chunks:
-        p = mp.Process(target=worker, args=(dic, hash_dictionary, result))
-        processes.append(p)
-        p.start()
-
-    for process in processes:
-        process.join()
-
-    return result._getvalue()
+if __name__ == '__main__':
+    users = import_users('/Users/andrew/ad_ntlm_hashes.txt')
+    print(find_duplicates(users))
