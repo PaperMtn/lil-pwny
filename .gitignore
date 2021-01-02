@@ -125,6 +125,8 @@ venv.bak/
 dmypy.json
 
 # package related
-src/additional_matches.txt
-src/duplicate_passwords.txt
-src/HIBP_matches.txt
+lil_pwny/additional_matches.txt
+lil_pwny/duplicate_passwords.txt
+lil_pwny/HIBP_matches.txt
+*.json
+lil_pwny/caching_test*.py
