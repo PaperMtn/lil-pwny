@@ -8,6 +8,7 @@ from datetime import timedelta
 from lil_pwny import hashing
 from lil_pwny import password_audit
 from lil_pwny import logger
+from lil_pwny import __about__
 
 OUTPUT_LOGGER = ''
 
@@ -23,6 +24,8 @@ def main():
         parser = argparse.ArgumentParser()
         parser.add_argument('-hibp', '--hibp-path', help='The HIBP .txt file of NTLM hashes',
                             dest='hibp', required=True)
+        parser.add_argument('--version', action='version',
+                            version='lil-pwny {}'.format(__about__.__version__))
         parser.add_argument('-c', '--custom', help='.txt file containing additional custom passwords to check for',
                             dest='custom')
         parser.add_argument('-ad', '--ad-hashes', help='The NTLM hashes from of AD users', dest='ad_hashes',
