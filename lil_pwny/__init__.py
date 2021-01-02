@@ -29,7 +29,7 @@ def main():
                             required=True)
         parser.add_argument('-d', '--duplicates', action='store_true', dest='d',
                             help='Output a list of duplicate password users')
-        parser.add_argument('--output', choices=['file', 'stdout'], dest='logging_type',
+        parser.add_argument('-output', '--output', choices=['file', 'stdout'], dest='logging_type',
                             help='Where to send results')
         parser.add_argument('-o', '--obfuscate', action='store_true', dest='obfuscate',
                             help='Obfuscate hashes from discovered matches by hashing with a random salt')
@@ -41,6 +41,8 @@ def main():
         duplicates = args.d
         logging_type = args.logging_type
         obfuscate = args.obfuscate
+
+        hasher = hashing.Hashing()
 
         if logging_type:
             if logging_type == 'file':
@@ -71,9 +73,10 @@ def main():
         try:
             hibp_results = password_audit.search(OUTPUT_LOGGER, hibp_file, ad_hash_file)
             hibp_count = len(hibp_results)
+            print(hibp_results)
             for hibp_match in hibp_results:
                 if obfuscate:
-                    hibp_match['hash'] = hashing.obfuscate(hibp_match.get('hash'))
+                    hibp_match['hash'] = hasher.obfuscate(hibp_match.get('hash'))
                     hibp_match['obfuscated'] = 'True'
                 else:
                     hibp_match['obfuscated'] = 'False'
@@ -86,7 +89,7 @@ def main():
         if custom_passwords:
             try:
                 # Import custom strings from file and convert them to NTLM hashes
-                custom_content = hashing.get_hashes(custom_passwords)
+                custom_content = hasher.get_hashes(custom_passwords)
 
                 # Create a tmp file to store the converted hashes and pass to the search function
                 # Filename is a randomly generated uuid
@@ -106,7 +109,7 @@ def main():
 
                 for custom_match in custom_matches:
                     if obfuscate:
-                        custom_match['hash'] = hashing.obfuscate(custom_match.get('hash'))
+                        custom_match['hash'] = hasher.obfuscate(custom_match.get('hash'))
                         custom_match['obfuscated'] = 'True'
                     else:
                         custom_match['obfuscated'] = 'False'
@@ -123,7 +126,7 @@ def main():
                 duplicate_count = len(duplicate_results)
                 for duplicate_match in duplicate_results:
                     if obfuscate:
-                        duplicate_match['hash'] = hashing.obfuscate(duplicate_match.get('hash'))
+                        duplicate_match['hash'] = hasher.obfuscate(duplicate_match.get('hash'))
                         duplicate_match['obfuscated'] = 'True'
                     else:
                         duplicate_match['obfuscated'] = 'False'
