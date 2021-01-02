@@ -1,4 +1,4 @@
-<img src="https://i.imgur.com/gzEZt6C.png" width="450">
+<img src="https://i.imgur.com/Q0pPSjN.png" width="450">
 
 # Lil Pwny
 ![Python 2.7 and 3 compatible](https://img.shields.io/badge/python-2.7%2C%203.x-blue.svg)
