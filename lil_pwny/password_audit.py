@@ -199,8 +199,3 @@ def _worker(line, userlist, result):
             })
 
     return result
-
-
-if __name__ == '__main__':
-    users = import_users('/Users/andrew/ad_ntlm_hashes.txt')
-    print(find_duplicates(users))
