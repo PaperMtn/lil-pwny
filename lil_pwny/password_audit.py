@@ -34,14 +34,7 @@ def find_duplicates(ad_hash_dict):
         List of dicts containing results for users using the same password
     """
 
-    outlist = []
-    for u in ad_hash_dict:
-        if u and len(ad_hash_dict.get(u)) > 1:
-            output = {
-                'hash': u,
-                'users': ad_hash_dict.get(u)
-            }
-            outlist.append(output)
+    outlist = [{'hash': u, 'users': ad_hash_dict.get(u)} for u in ad_hash_dict if u and len(ad_hash_dict.get(u)) > 1]
 
     return outlist
 
