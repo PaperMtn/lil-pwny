@@ -1,4 +1,4 @@
-## 3.0.1 - 2024-07-22
+## [3.0.1] - 2024-07-22
 ### Added
 - Updated logging
   - New stdout logging experience with colourised output that is easier to read.
@@ -18,7 +18,7 @@
 ### Removed
 - Removed the option to log to a file. This was not a useful feature, was hard to maintain, and can be achieved by redirecting stdout to a file.
 
-## 2.0.0 - 2021-01-02
+## [2.0.0] - 2021-01-02
 ### Added
 - Massive enhancements to make much better use of multiprocessing for the large HIBP password file, as well as more efficient importing and handling of Active Directory user hashes. 
 - Updated directory structure to play more nicely with more OS versions and flavours, rather than installing in the `src` directory.
@@ -26,5 +26,5 @@
 - New option to obfuscate genuine password NTLM hashes in logging output. This is achieved by further hashing the hash with a randomly generated salt.
 - Active Directory computer accounts are now not imported with AD user hashes. There is little value in assessing these, so no point importing them.
 
-## 1.2.0 - 2020-03-22
+## [1.2.0] - 2020-03-22
 Initial Release
