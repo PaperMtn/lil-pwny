@@ -66,7 +66,7 @@ def main():
             dest='hibp',
             required=True)
         parser.add_argument(
-            '--version',
+            '-v', '--version',
             action='version',
             version=f'lil-pwny {project_metadata.get("version")}')
         parser.add_argument(
