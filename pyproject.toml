@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "lil-pwny"
+version = "3.0.0"
+description = "Fast offline auditing of Active Directory passwords using Python and multiprocessing"
+authors = ["PaperMtn <papermtn@protonmail.com>"]
+license = "GPL-3.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+colorama = "^0.4.6"
+pycryptodome = "^3.20.0"
+charset-normalizer = "^3.3.2"
+
+[tool.poetry.scripts]
+lil-pwny = "lil_pwny:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pylint.'MASTER']
+disable = [
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "fixme",
+    "duplicate-code",
+    "logging-fstring-interpolation",
+    "too-many-instance-attributes",
+]
+max-line-length = 120
+const-naming-style = "any"

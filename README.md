@@ -1,14 +1,13 @@
 <img src="https://i.imgur.com/Q0pPSjN.png" width="450">
 
 # Lil Pwny
-![Python 2.7 and 3 compatible](https://img.shields.io/badge/python-2.7%2C%203.x-blue.svg)
+![Python 2.7 and 3 compatible](https://img.shields.io/pypi/pyversions/lil-pwny)
 ![PyPI version](https://img.shields.io/pypi/v/lil-pwny.svg)
 ![License: MIT](https://img.shields.io/pypi/l/lil-pwny.svg)
 
-Fast, offline auditing of Active Directory passwords using Python.
+Fast offline auditing of Active Directory passwords using Python.
 
 ## About Lil Pwny
-
 Lil Pwny is a Python application to perform an offline audit of NTLM hashes of users' passwords, recovered from Active Directory, against known compromised passwords from Have I Been Pwned. Results will be output in JSON format containing the username, matching hash (can be obfuscated), and how many times the matching password has been seen in HIBP
 
 There are also additional features:
@@ -27,11 +26,16 @@ Because it uses multiprocessing, the more cores you have available, the faster L
     - 12 logical cores - 0:04:28.579201
 
 ## Output
-Lil Pwny will output results as JSON format either to stdout or to file:
+Lil Pwny will output results as either to stdout or JSON:
 
 ```json
 {"localtime": "2021-00-00 00:00:00,000", "level": "NOTIFY", "source": "Lil Pwny", "match_type": "hibp", "detection_data": {"username": "RICKON.STARK", "hash": "0C02C50B2B08F2979DFDE12EDA472FC1", "matches_in_hibp": "24230577", "obfuscated": "True"}}
 ```
+You can redirect the JSON output of Lil Pwny to file:
+```commandline
+lil-pwny -ad ... > lil-pwny-results.json 
+```
+
 This JSON formatted logging can be easily ingested in to a SIEM or other log analysis tool, and can be fed to other scripts or platforms for automated resolution actions.
 
 ## Installation
@@ -44,23 +48,25 @@ pip install lil-pwny
 Lil-pwny will be installed as a global command, use as follows:
 
 ```
-usage: lil-pwny [-h] -hibp HIBP [-c CUSTOM] -ad AD_HASHES [-d]
-                   [-output {file,stdout}] [-o]
+usage: lil-pwny [-h] -hibp HIBP [--version] [-c CUSTOM] -ad AD_HASHES [-d] [-output {file,stdout,json}] [-o] [--debug]
 
-optional arguments:
+Fast offline auditing of Active Directory passwords using Python
+
+options:
   -h, --help            show this help message and exit
-  -hibp HIBP, --hibp-path HIBP
-                        The HIBP .txt file of NTLM hashes
+  -hibp HIBP, --hibp HIBP
+                        The .txt file containing HIBP NTLM hashes
+  --version             show program's version number and exit
   -c CUSTOM, --custom CUSTOM
-                        .txt file containing additional custom passwords to
-                        check for
+                        .txt file containing additional custom passwords to check for
   -ad AD_HASHES, --ad-hashes AD_HASHES
-                        The NTLM hashes from of AD users
+                        The .txt file containing NTLM hashes from AD users
   -d, --duplicates      Output a list of duplicate password users
-  -output {file,stdout}, --output {file,stdout}
+  -output {file,stdout,json}, --output {file,stdout,json}
                         Where to send results
-  -o, --obfuscate       Obfuscate hashes from discovered matches by hashing
-                        with a random salt
+  -o, --obfuscate       Obfuscate hashes from discovered matches by hashing with a random salt
+  --debug               Turn on debug level logging
+
 
 ```
 
@@ -95,9 +101,7 @@ Get-ADDBAccount -All -DBPath '.\Active Directory\ntds.dit' -BootKey $bootKey | F
 ```
 
 ### Step 3: Download the latest HIBP hash file
-The file can be downloaded from [here](https://downloads.pwnedpasswords.com/passwords/pwned-passwords-ntlm-ordered-by-count-v7.7z)
-
-The latest version of the hash file contains around 613 million hashes.
+The file can be downloaded from the HIBP API using a .net utility  [here](https://github.com/HaveIBeenPwned/PwnedPasswordsDownloader)
 
 ## Resources
 - [ntdsutil & IFM](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/cc732530(v=ws.11))

@@ -1,0 +1,49 @@
+name: Create GitHub Release
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ '3.12' ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          pip install flake8 poetry
+          poetry install
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Install
+        run: |
+          poetry build
+          python3 -m pip install dist/*.whl
+      - name: Extract release notes
+        id: extract-release-notes
+        uses: ffurrer2/extract-release-notes@v1
+        with:
+          changelog_file: CHANGELOG.md
+      - name: Retrieve version
+        run: |
+          echo "TAG_NAME=$(lil-pwny -v | awk '{match($0, /[0-9]+\.[0-9]+\.[0-9]+/); print substr($0, RSTART, RLENGTH)}')" >> $GITHUB_OUTPUT
+        id: version
+      - name: Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*.tar.gz"
+          body: ${{ steps.extract-release-notes.outputs.release_notes }}
+          tag: ${{ steps.version.outputs.TAG_NAME }}
+          name: Lil Pwny - ${{ steps.version.outputs.TAG_NAME }}
