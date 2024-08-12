@@ -281,7 +281,13 @@ def _worker(line: str,
     """
 
     try:
-        ntlm_hash, count = line.rstrip().split(':')[0].upper(), line.rstrip().split(':')[1].strip().upper()
+        ntlm_hash, count, plaintext_password = (line.rstrip().split(':')[0].upper(),
+                                                line.rstrip().split(':')[1].strip().upper(),
+                                                line.rstrip().split(':')[2].strip())
+    except IndexError:
+        ntlm_hash, count, plaintext_password = (line.rstrip().split(':')[0].upper(),
+                                                line.rstrip().split(':')[1].strip().upper(),
+                                                'REDACTED')
     except Exception as e:
         if logger:
             logger.log('ERROR', f'Failed to parse line: {line}. Error: {str(e)}')
@@ -291,11 +297,13 @@ def _worker(line: str,
         return_hash = ntlm_hash
         if obfuscated:
             return_hash = hash_client.obfuscate(ntlm_hash)
+            plaintext_password = 'REDACTED'
         for u in user_list.get(ntlm_hash):
             finding = {
                 'username': u,
                 'hash': return_hash,
                 'matches_in_hibp': count,
+                'plaintext_password': plaintext_password,
                 'obfuscated': obfuscated
             }
             if isinstance(logger, StdoutLogger):
