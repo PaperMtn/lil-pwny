@@ -40,7 +40,7 @@ class StdoutLogger:
             mes_type = 'HIBP'
         if notify_type == "custom":
             message = f'CUSTOM_MATCH: \n' \
-                      f'    ACCOUNT: {message.get("username").lower()} HASH: {message.get("hash")} OBFUSCATED: {message.get("obfuscated")}'
+                      f'    ACCOUNT: {message.get("username").lower()} HASH: {message.get("hash")} PASSWORD: {message.get("plaintext_password")} OBFUSCATED: {message.get("obfuscated")}'
             mes_type = 'CUSTOM'
         if notify_type == "duplicate":
             message = 'DUPLICATE: \n' \
