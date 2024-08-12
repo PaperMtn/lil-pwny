@@ -11,6 +11,7 @@ from importlib import metadata
 from lil_pwny import password_audit, hashing
 from lil_pwny.loggers import JSONLogger, StdoutLogger
 from lil_pwny.exceptions import FileReadError
+from lil_pwny.custom_list_enhancer import CustomListEnhancer
 
 output_logger = JSONLogger
 
@@ -74,6 +75,12 @@ def main():
             help='.txt file containing additional custom passwords to check for',
             dest='custom')
         parser.add_argument(
+            '-custom-enhance', '--custom-enhance',
+            help='generate an enhanced custom password list based on the provided custom password list. Must be used'
+                 ' with -c/--custom flag. The enhanced list will stored in memory and not written to disk.'
+                 ' Provide the minimum length of the passwords you want. Default is 8',
+            dest='custom_enhance')
+        parser.add_argument(
             '-ad', '--ad-hashes',
             help='The .txt file containing NTLM hashes from AD users',
             dest='ad_hashes',
@@ -109,6 +116,7 @@ def main():
         logging_type = args.logging_type
         obfuscate = args.obfuscate
         debug = args.debug
+        custom_enhance = args.custom_enhance
 
         hasher = hashing.Hashing()
 
@@ -120,7 +128,7 @@ def main():
         else:
             logger = init_logger(logging_type, debug)
 
-        logger.log('INFO', 'Lil Pwny started execution')
+        logger.log('SUCCESS', 'Lil Pwny started execution')
         logger.log('INFO', f'Version: {project_metadata.get("version")}')
         logger.log('INFO', f'Created by: {project_metadata.get("author")}')
         logger.log('INFO', 'Loading AD user hashes...')
@@ -138,13 +146,13 @@ def main():
 
         # Check HIBP file size
         try:
-            logger.log('INFO', f'Size of HIBP file provided {get_readable_file_size(hibp_file)}')
+            logger.log('SUCCESS', f'Size of HIBP file provided {get_readable_file_size(hibp_file)}')
         except FileNotFoundError as e:
             logger.log('CRITICAL', f'HIBP file not found: {e.filename}')
             sys.exit(1)
 
         # Compare AD users against HIBP hashes
-        logger.log('INFO', f'Comparing {ad_lines} AD users against HIBP compromised passwords...')
+        logger.log('SUCCESS', f'Comparing {ad_lines} AD users against HIBP compromised passwords...')
         try:
             hibp_results = password_audit.search(
                 log_handler=logger,
@@ -167,14 +175,29 @@ def main():
         custom_count = 0
         if custom_passwords:
             try:
-                custom_content = hasher.get_hashes(custom_passwords)
+                logger.log('INFO', 'Loading custom password list...')
+                with open(custom_passwords, 'r') as f:
+                    custom_passwords = [line.strip() for line in f]
+                    logger.log('SUCCESS', f'Loaded {len(custom_passwords)} custom passwords')
+
+                if custom_enhance:
+                    logger.log('INFO', 'Enhancing custom password list by adding variations...')
+                    custom_client = CustomListEnhancer(min_password_length=int(custom_enhance))
+                    custom_passwords = custom_client.enhance_list(custom_passwords)
+                    logger.log('SUCCESS', f'Enhanced custom password list to {len(custom_passwords)} '
+                                          f'plaintext passwords')
+
+                logger.log('INFO', 'Converting custom passwords to NTLM hashes...')
+                custom_password_hashes = hasher.get_hashes(custom_passwords)
+                logger.log('SUCCESS', f'Generated {len(custom_password_hashes)} custom password hashes')
+
                 with tempfile.NamedTemporaryFile('w', delete=False) as temp_file:
-                    for h in custom_content:
-                        temp_file.write(f'{h}:0\n')
+                    for h in custom_password_hashes:
+                        temp_file.write(f'{h}\n')
                     temp_file_path = temp_file.name
 
                 logger.log('INFO', f'Comparing {ad_lines} Active Directory'
-                                   f' users against {len(custom_content)} custom password hashes...')
+                                   f' users against {len(custom_password_hashes)} custom password hashes...')
                 custom_matches = password_audit.search(
                     log_handler=logger,
                     hibp_hashes_filepath=temp_file_path,
@@ -211,12 +234,12 @@ def main():
         time_taken = time.time() - start
         total_comp_count = custom_count + hibp_count
 
-        logger.log('INFO', 'Audit completed')
-        logger.log('INFO', f'Total compromised passwords: {total_comp_count}')
-        logger.log('INFO', f'Passwords matching HIBP: {hibp_count}')
-        logger.log('INFO', f'Passwords matching custom password dictionary: {custom_count}')
-        logger.log('INFO', f'Passwords duplicated (being used by multiple user accounts): {duplicate_count}')
-        logger.log('INFO', f'Time taken: {str(timedelta(seconds=time_taken))}')
+        logger.log('SUCCESS', 'Audit completed')
+        logger.log('SUCCESS', f'Total compromised passwords: {total_comp_count}')
+        logger.log('SUCCESS', f'Passwords matching HIBP: {hibp_count}')
+        logger.log('SUCCESS', f'Passwords matching custom password dictionary: {custom_count}')
+        logger.log('SUCCESS', f'Passwords duplicated (being used by multiple user accounts): {duplicate_count}')
+        logger.log('SUCCESS', f'Time taken: {str(timedelta(seconds=time_taken))}')
 
     except Exception as e:
         logger.log('CRITICAL', str(e))
