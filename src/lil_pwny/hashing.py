@@ -2,10 +2,10 @@ import binascii
 import hashlib
 import secrets
 from typing import List
+from multiprocessing import Pool, cpu_count
+
 
 from Crypto.Hash import MD4
-
-from lil_pwny.exceptions import FileReadError
 
 
 class Hashing(object):
@@ -24,22 +24,25 @@ class Hashing(object):
         Returns:
             Converted NTLM hash
         """
-
         hasher = MD4.new()
         hasher.update(input_string.encode('utf-16le'))
         output = hasher.digest()
         return binascii.hexlify(output).decode('utf-8').upper()
 
-    def get_hashes(self, password_list: str) -> List[str]:
-        """Converts a list of strings to NTLM hashes
+    def _process_password(self, password: str) -> str:
+        return f'{self._hashify(password)}:0:{password}'
+
+    def get_hashes(self, password_list: List[str]) -> List[str]:
+        """Converts a list of strings to NTLM hashes using multiprocessing
 
         Args:
-            password_list: file containing strings to convert to NTLM hashes
+            password_list: list of strings to convert to NTLM hashes
         Returns:
             List of NTLM hashes of the passwords
         """
-
-        return [self._hashify(password) for password in password_list]
+        with Pool(cpu_count()) as pool:
+            hashes = pool.map(self._process_password, password_list)
+        return hashes
 
     def obfuscate(self, input_hash: str) -> str:
         """Further hashes the input NTLM hash with a random salt
