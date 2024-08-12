@@ -10,13 +10,25 @@ Fast offline auditing of Active Directory passwords using Python.
 ## About Lil Pwny
 Lil Pwny is a Python application to perform an offline audit of NTLM hashes of users' passwords, recovered from Active Directory, against known compromised passwords from Have I Been Pwned. Results will be output in JSON format containing the username, matching hash (can be obfuscated), and how many times the matching password has been seen in HIBP
 
-There are also additional features:
-- Ability to provide a list of your own custom passwords to check AD users against. This allows you to check user passwords against passwords relevant to your organisation that you suspect people might be using. These are NTLM hashed, and AD hashes are then compared with this as well as the HIBP hashes.
-- Return a list of accounts using the same passwords. Useful for finding users using the same password for their administrative and standard accounts.
-- Obfuscate hashes in output, for if you don't want to handle or store live user NTLM hashes.
-
 More information about Lil Pwny can be found [on my blog](https://papermtn.co.uk/category/tools/lil-pwny/)
 
+## Features
+
+- **Custom Password Auditing**: Ability to provide a list of your own custom passwords to check AD users against. This allows you to check user passwords against passwords relevant to your organisation that you suspect people might be using. 
+  - Pass a .txt file with the plaintext passwords you want to search for, these are then NTLM hashed and AD hashes are then compared with this as well as the HIBP hashes.
+- **Detect Duplicates**: Return a list of accounts using the same passwords. Useful for finding users using the same password for their administrative and standard accounts.
+- **Obfuscated Output**: Obfuscate hashes in output, for if you don't want to handle or store live user NTLM hashes.
+
+### Custom Password List Enhancement
+Lil Pwny provides the functionality to enhance your custom password list by adding commonly used variants of your custom passwords. These include:
+- Passwords with common 'leetspeak' substitutions (e.g. `P@ssw0rd`)
+- Uppercase versions of the password, and uppercase first characters (e.g. `PASSWORD`, `Password`)
+- Passwords with common special characters appended or prepended (e.g. `password!`, `!password`)
+- Passwords padded with common alphanumeric characters, special characters and repetitions of themselves to make them meet a given minimum length (e.g. `password123!`, `!passwordabc`, `passwordpassword`)
+  - You pass your desired minimum password length to Lil Pwny when selecting the custom list enhancement option
+- Passwords with dates appended starting from the year 1950 up to 10 years from today's date (e.g. `password1950`, `password2034`)
+
+A custom password list of 100 plaintext passwords generates 49848660 variations.
 ## Resources
 This application has been developed to make the most of multiprocessing in Python, with the aim of it working as fast as possible on consumer level hardware.
 
@@ -48,7 +60,7 @@ pip install lil-pwny
 Lil-pwny will be installed as a global command, use as follows:
 
 ```
-usage: lil-pwny [-h] -hibp HIBP [--version] [-c CUSTOM] -ad AD_HASHES [-d] [-output {file,stdout,json}] [-o] [--debug]
+usage: lil-pwny [-h] -hibp HIBP [-v] [-c CUSTOM] [-custom-enhance CUSTOM_ENHANCE] -ad AD_HASHES [-d] [-output {file,stdout,json}] [-o] [--debug]
 
 Fast offline auditing of Active Directory passwords using Python
 
@@ -56,9 +68,11 @@ options:
   -h, --help            show this help message and exit
   -hibp HIBP, --hibp HIBP
                         The .txt file containing HIBP NTLM hashes
-  --version             show program's version number and exit
+  -v, --version         show program's version number and exit
   -c CUSTOM, --custom CUSTOM
                         .txt file containing additional custom passwords to check for
+  -custom-enhance CUSTOM_ENHANCE, --custom-enhance CUSTOM_ENHANCE
+                        generate an enhanced custom password list based on the provided custom password list. Must be used with -c/--custom flag. The enhanced list will stored in memory and not written to disk. Provide the minimum length of the passwords you want. Default is 8
   -ad AD_HASHES, --ad-hashes AD_HASHES
                         The .txt file containing NTLM hashes from AD users
   -d, --duplicates      Output a list of duplicate password users
@@ -66,8 +80,6 @@ options:
                         Where to send results
   -o, --obfuscate       Obfuscate hashes from discovered matches by hashing with a random salt
   --debug               Turn on debug level logging
-
-
 ```
 
 Example:

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lil-pwny"
-version = "3.1."
+version = "3.1.0"
 description = "Fast offline auditing of Active Directory passwords using Python and multiprocessing"
 authors = ["PaperMtn <papermtn@protonmail.com>"]
 license = "GPL-3.0"
