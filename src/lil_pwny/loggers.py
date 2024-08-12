@@ -98,6 +98,12 @@ class StdoutLogger:
                 key_color = Fore.YELLOW
                 style = Style.NORMAL
                 mes_type = '!'
+            elif mes_type == "SUCCESS":
+                base_color = Fore.LIGHTGREEN_EX
+                high_color = Fore.LIGHTGREEN_EX
+                key_color = Fore.LIGHTGREEN_EX
+                style = Style.NORMAL
+                mes_type = '>>'
             elif mes_type == "DUPLICATE":
                 base_color = Fore.LIGHTGREEN_EX
                 high_color = Fore.LIGHTGREEN_EX
