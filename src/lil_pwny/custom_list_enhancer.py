@@ -1,6 +1,7 @@
 from typing import List
 from datetime import datetime
 
+
 class CustomListEnhancer:
     """ Enhances the custom password list with additional variations
     """
@@ -45,8 +46,7 @@ class CustomListEnhancer:
                 variations.extend(additional_variations)
             return variations
 
-        return self._deduplicate(
-            [variation for password in password_list for variation in _generate_variations(password)])
+        return [variation for password in password_list for variation in _generate_variations(password)]
 
     def _capitalise_first_character(self, password_list: List) -> List:
         """ Capitalise the first letter of each password
@@ -62,22 +62,16 @@ class CustomListEnhancer:
         output_list = []
         for password in password_list:
             if len(password) < self.min_password_length:
-                # Calculate how many times the word needs to be appended
-                repeat_count = (self.min_password_length // len(password)) + 1
-                repeated_password = password * repeat_count
-
-                # Calculate the padding length needed
+                repeated_password = (password * ((self.min_password_length // len(password)) + 1))[
+                                    :self.min_password_length]
                 padding_length = self.min_password_length - len(password)
                 lowercase_padding = ''.join(chr(97 + i % 26) for i in range(padding_length))
                 uppercase_padding = ''.join(chr(65 + i % 26) for i in range(padding_length))
-                numeric_padding = ''.join(chr(49 + i % 10) for i in range(padding_length))  # chr(49) is '1'
-
-                # Append variations with lowercase, uppercase, and numeric paddings
+                numeric_padding = ''.join(chr(49 + i % 10) for i in range(padding_length))
                 output_list.append(repeated_password)
                 output_list.append(password + lowercase_padding)
                 output_list.append(password + uppercase_padding)
                 output_list.append(password + numeric_padding)
-
         return output_list
 
     def _append_years(self, password_list: List) -> List:
@@ -87,25 +81,29 @@ class CustomListEnhancer:
         current_year = datetime.now().year
         end_year = current_year + 10
         years = [str(year) for year in range(1950, end_year + 1)]
-
         return [password + year for password in password_list for year in years]
 
     def _append_special_characters(self, password_list: List) -> List:
-        """ Append special characters commonly used in passwords to the end of each password in the list """
-
-        special_characters = ['!', '@', '#', '$', '%', '&', '*', '?']
-
-        return [password + char for password in password_list for char in special_characters]
-
-
-    def enhance_list(self, password_list: List) -> List:
-        """ Enhance the password list with additional variations
+        """ Append special characters commonly used in passwords to the end of each password in the list
         """
 
-        password_list = self._deduplicate(password_list)
-        password_list += self._add_leet_speak(password_list)
-        password_list += self._capitalise_first_character(password_list)
-        password_list += self._pad_password(password_list)
-        password_list += self._append_years(password_list)
-        password_list += self._append_special_characters(password_list)
-        return self._deduplicate(password_list)
+        special_characters = ['!', '@', '#', '$', '%', '&', '*', '?']
+        return [password + char for password in password_list for char in special_characters]
+
+    def enhance_list(self, password_list: List) -> List:
+        """ Enhance a plaintext password list with additional variations
+
+        Args:
+            password_list: List of passwords to enhance
+        Returns:
+            List of enhanced passwords in plaintext
+        """
+
+        enhanced_list = password_list
+        enhanced_list += self._add_leet_speak(password_list)
+        enhanced_list += self._capitalise_first_character(enhanced_list)
+        enhanced_list += self._pad_password(enhanced_list)
+        enhanced_list += self._append_years(enhanced_list)
+        enhanced_list += self._append_special_characters(enhanced_list)
+        return self._deduplicate(enhanced_list)
+
