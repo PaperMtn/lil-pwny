@@ -1,7 +1,7 @@
 import binascii
 import hashlib
 import secrets
-from typing import Dict
+from typing import List
 
 from Crypto.Hash import MD4
 
@@ -30,25 +30,16 @@ class Hashing(object):
         output = hasher.digest()
         return binascii.hexlify(output).decode('utf-8').upper()
 
-    def get_hashes(self, input_file: str) -> Dict[str, str]:
-        """Reads the input file of passwords, converts them to NTLM hashes
+    def get_hashes(self, password_list: str) -> List[str]:
+        """Converts a list of strings to NTLM hashes
 
         Args:
-            input_file: file containing strings to convert to NTLM hashes
+            password_list: file containing strings to convert to NTLM hashes
         Returns:
-            Dict that replicates HIBP format: 'hash:occurrence_count'
+            List of NTLM hashes of the passwords
         """
 
-        output_dict = {}
-        try:
-            with open(input_file, 'r') as f:
-                for item in f:
-                    if item:
-                        output_dict[self._hashify(item.strip())] = '0'
-        except IOError as e:
-            raise FileReadError(input_file, str(e))
-
-        return output_dict
+        return [self._hashify(password) for password in password_list]
 
     def obfuscate(self, input_hash: str) -> str:
         """Further hashes the input NTLM hash with a random salt
