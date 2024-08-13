@@ -119,5 +119,12 @@ Get-ADDBAccount -All -DBPath '.\Active Directory\ntds.dit' -BootKey $bootKey | F
 ### Step 3: Download the latest HIBP hash file
 The file can be downloaded from the HIBP API using a .net utility  [here](https://github.com/HaveIBeenPwned/PwnedPasswordsDownloader)
 
+### Optional Step: Filter unwanted AD accounts
+The PowerShell script in the [scripts](./scripts/Filter-ADUsers) directory can be used to remove unwanted accounts from the IFM output before processing. These include:
+
+- Disabled accounts
+- Computer accounts
+
+
 ## Resources
 - [ntdsutil & IFM](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/cc732530(v=ws.11))
