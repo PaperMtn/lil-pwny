@@ -9,12 +9,12 @@ class MalformedHIBPError(Exception):
 
 
 class HashingError(Exception):
-    """Base class for exceptions in this module."""
+    """ Base class for exceptions in this module."""
     pass
 
 
 class FileReadError(HashingError):
-    """Exception raised for errors in the input file.
+    """ Exception raised for errors in the input file.
 
     Attributes:
         filename: The name of the input file which caused the error.

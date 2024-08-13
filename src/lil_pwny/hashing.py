@@ -17,7 +17,7 @@ class Hashing(object):
 
     @staticmethod
     def _hashify(input_string: str) -> str:
-        """Converts the input string to a NTLM hash and returns the hash
+        """ Converts the input string to a NTLM hash and returns the hash
 
         Args:
             input_string: string to be converted to NTLM hash
@@ -33,7 +33,7 @@ class Hashing(object):
         return f'{self._hashify(password)}:0:{password}'
 
     def get_hashes(self, password_list: List[str]) -> List[str]:
-        """Converts a list of strings to NTLM hashes using multiprocessing
+        """ Converts a list of strings to NTLM hashes using multiprocessing
 
         Args:
             password_list: list of strings to convert to NTLM hashes
@@ -45,7 +45,7 @@ class Hashing(object):
         return hashes
 
     def obfuscate(self, input_hash: str) -> str:
-        """Further hashes the input NTLM hash with a random salt
+        """ Further hashes the input NTLM hash with a random salt
 
         Args:
             input_hash: hash to be obfuscated

@@ -4,31 +4,30 @@ import sys
 import tempfile
 import time
 import traceback
-import warnings
 from datetime import timedelta
 from importlib import metadata
 
 from lil_pwny import password_audit, hashing
-from lil_pwny.loggers import JSONLogger, StdoutLogger
+from lil_pwny.custom_password_enhancer import CustomPasswordEnhancer
 from lil_pwny.exceptions import FileReadError
-from lil_pwny.custom_list_enhancer import CustomListEnhancer
+from lil_pwny.loggers import JSONLogger, StdoutLogger
 
 output_logger = JSONLogger
 
 
-def init_logger(logging_type: str, debug: bool) -> JSONLogger or StdoutLogger:
+def init_logger(logging_type: str, verbose: bool) -> JSONLogger or StdoutLogger:
     """ Create a logger object. Defaults to stdout if no option is given
 
     Args:
         logging_type: Type of logging to use
-        debug: Whether to use debug level logging or not
+        verbose: Whether to use verbose logging or not
     Returns:
         JSONLogger or StdoutLogger
     """
 
     if not logging_type or logging_type == 'stdout':
-        return StdoutLogger(debug=debug)
-    return JSONLogger(debug=debug)
+        return StdoutLogger(debug=verbose)
+    return JSONLogger(debug=verbose)
 
 
 def get_readable_file_size(file_path: str) -> str:
@@ -103,10 +102,10 @@ def main():
             default=False,
             help='Obfuscate hashes from discovered matches by hashing with a random salt')
         parser.add_argument(
-            '--debug',
-            dest='debug',
+            '--verbose',
+            dest='verbose',
             action='store_true',
-            help='Turn on debug level logging')
+            help='Turn on verbose logging')
 
         args = parser.parse_args()
         hibp_file = args.hibp
@@ -115,18 +114,18 @@ def main():
         duplicates = args.d
         logging_type = args.logging_type
         obfuscate = args.obfuscate
-        debug = args.debug
+        verbose = args.verbose
         custom_enhance = args.custom_enhance
 
         hasher = hashing.Hashing()
 
         if logging_type == 'file':
             logging_type = 'stdout'
-            logger = init_logger(logging_type, debug)
+            logger = init_logger(logging_type, verbose)
             logger.log('WARNING', 'File output is no longer supported.'
                                   ' Select JSON output and redirect this to file. Defaulting to stdout')
         else:
-            logger = init_logger(logging_type, debug)
+            logger = init_logger(logging_type, verbose)
 
         logger.log('SUCCESS', 'Lil Pwny started execution')
         logger.log('INFO', f'Version: {project_metadata.get("version")}')
@@ -177,37 +176,64 @@ def main():
             try:
                 logger.log('INFO', 'Loading custom password list...')
                 with open(custom_passwords, 'r') as f:
-                    custom_passwords = [line.strip() for line in f]
+                    custom_passwords = [line.strip() for line in f if line.strip()]
                     logger.log('SUCCESS', f'Loaded {len(custom_passwords)} custom passwords')
 
                 if custom_enhance:
+                    custom_count = 0
+                    variants_count = 0
                     logger.log('INFO', 'Enhancing custom password list by adding variations...')
-                    custom_client = CustomListEnhancer(min_password_length=int(custom_enhance))
-                    custom_passwords = custom_client.enhance_list(custom_passwords)
-                    logger.log('SUCCESS', f'Enhanced custom password list to {len(custom_passwords)} '
-                                          f'plaintext passwords')
+                    custom_client = CustomPasswordEnhancer(min_password_length=int(custom_enhance))
+                    for custom_pwd in custom_passwords:
+                        logger.log('DEBUG', f'Generating variants for `{custom_pwd}`...')
+                        temp_custom_passwords = custom_client.enhance_password(custom_pwd)
+                        logger.log('DEBUG', 'Converting custom passwords to NTLM hashes...')
+                        custom_password_hashes = hasher.get_hashes(temp_custom_passwords)
+                        variants_count += len(custom_password_hashes)
+                        logger.log('SUCCESS', f'Generated {len(custom_password_hashes)} variants for `{custom_pwd}`')
+                        with tempfile.NamedTemporaryFile('w', delete=False) as temp_file:
+                            for h in custom_password_hashes:
+                                temp_file.write(f'{h}\n')
+                            temp_file_path = temp_file.name
+                        logger.log('DEBUG', f'Custom hashes written to temp file {temp_file_path}')
 
-                logger.log('INFO', 'Converting custom passwords to NTLM hashes...')
-                custom_password_hashes = hasher.get_hashes(custom_passwords)
-                logger.log('SUCCESS', f'Generated {len(custom_password_hashes)} custom password hashes')
+                        logger.log('INFO', f'Comparing {ad_lines} Active Directory'
+                                           f' users against {len(custom_password_hashes)} custom password hashes...')
+                        custom_matches = password_audit.search(
+                            log_handler=logger,
+                            hibp_hashes_filepath=temp_file_path,
+                            ad_user_hashes=ad_users,
+                            finding_type='custom',
+                            obfuscated=obfuscate)
+                        os.remove(temp_file_path)
+                        logger.log('DEBUG', f'Temp file {temp_file_path} deleted')
+                        custom_count += len(custom_matches)
+                        if logging_type != 'stdout':
+                            for result in custom_matches:
+                                logger.log('NOTIFY', result, notify_type='custom')
+                else:
+                    logger.log('DEBUG', 'Converting custom passwords to NTLM hashes...')
+                    custom_password_hashes = hasher.get_hashes(custom_passwords)
+                    with tempfile.NamedTemporaryFile('w', delete=False) as temp_file:
+                        for h in custom_password_hashes:
+                            temp_file.write(f'{h}\n')
+                        temp_file_path = temp_file.name
+                    logger.log('DEBUG', f'Custom hashes written to temp file {temp_file_path}')
 
-                with tempfile.NamedTemporaryFile('w', delete=False) as temp_file:
-                    for h in custom_password_hashes:
-                        temp_file.write(f'{h}\n')
-                    temp_file_path = temp_file.name
-
-                logger.log('INFO', f'Comparing {ad_lines} Active Directory'
-                                   f' users against {len(custom_password_hashes)} custom password hashes...')
-                custom_matches = password_audit.search(
-                    log_handler=logger,
-                    hibp_hashes_filepath=temp_file_path,
-                    ad_user_hashes=ad_users,
-                    finding_type='custom',
-                    obfuscated=obfuscate)
-                custom_count = len(custom_matches)
-                if logging_type != 'stdout':
-                    for result in custom_matches:
-                        logger.log('NOTIFY', result, notify_type='custom')
+                    logger.log('INFO', f'Comparing {ad_lines} Active Directory'
+                                       f' users against {len(custom_password_hashes)} custom password hashes...')
+                    custom_matches = password_audit.search(
+                        log_handler=logger,
+                        hibp_hashes_filepath=temp_file_path,
+                        ad_user_hashes=ad_users,
+                        finding_type='custom',
+                        obfuscated=obfuscate)
+                    os.remove(temp_file_path)
+                    logger.log('DEBUG', f'Temp file {temp_file_path} deleted')
+                    custom_count = len(custom_matches)
+                    if logging_type != 'stdout':
+                        for result in custom_matches:
+                            logger.log('NOTIFY', result, notify_type='custom')
             except FileNotFoundError as e:
                 logger.log('CRITICAL', f'Custom password file not found: {e.filename}')
                 sys.exit(1)
@@ -238,6 +264,9 @@ def main():
         logger.log('SUCCESS', f'Total compromised passwords: {total_comp_count}')
         logger.log('SUCCESS', f'Passwords matching HIBP: {hibp_count}')
         logger.log('SUCCESS', f'Passwords matching custom password dictionary: {custom_count}')
+        if custom_enhance:
+            logger.log('SUCCESS', f'Variant passwords generated from {len(custom_passwords)} custom passwords:'
+                                  f' {variants_count}')
         logger.log('SUCCESS', f'Passwords duplicated (being used by multiple user accounts): {duplicate_count}')
         logger.log('SUCCESS', f'Time taken: {str(timedelta(seconds=time_taken))}')
 

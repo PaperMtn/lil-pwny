@@ -52,7 +52,7 @@ def import_users(filepath: str) -> Dict[str, List[str]]:
 
 
 def find_duplicates(ad_hash_dict: Dict, obfuscated: bool) -> List[dict]:
-    """Returns users using the same hash in the input file. Outputs
+    """ Returns users using the same hash in the input file. Outputs
     a file grouping all users of a hash being used more than once
 
     Args:
@@ -130,7 +130,7 @@ def search(log_handler: JSONLogger or StdoutLogger,
 
 
 def _nonblank_lines(f: TextIO) -> str:
-    """Generator to filter out blank lines from the input list
+    """ Generator to filter out blank lines from the input list
 
     Args:
         f: input file
@@ -215,7 +215,7 @@ def _multi_pro_search(log_handler: JSONLogger or StdoutLogger,
                       worker_function: callable,
                       worker_function_args: List,
                       skip_lines: int = 0) -> List[dict]:
-    """Breaks the [HIBP|custom passwords] file into blocks and uses multiprocessing to iterate through them and return
+    """ Breaks the [HIBP|custom passwords] file into blocks and uses multiprocessing to iterate through them and return
      any matches against AD users.
 
     Args:
@@ -239,8 +239,8 @@ def _multi_pro_search(log_handler: JSONLogger or StdoutLogger,
     jobs = _divide_blocks(hibp_filepath, 1024 * 1024 * block_size, skip_lines)
     jobs = [list(j) + [worker_function, encoding] + worker_function_args for j in jobs]
 
-    log_handler.log('INFO', f'Split into {len(jobs)} parallel jobs ')
-    log_handler.log('INFO', f'{cores} cores being utilised')
+    log_handler.log('DEBUG', f'Split into {len(jobs)} parallel jobs ')
+    log_handler.log('DEBUG', f'{cores} cores being utilised')
 
     pool = mp.Pool(cores - 1, maxtasksperchild=1000)
 
