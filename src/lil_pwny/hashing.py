@@ -1,11 +1,11 @@
 import binascii
 import hashlib
 import secrets
-from typing import Dict
+from typing import List
+from multiprocessing import Pool, cpu_count
+
 
 from Crypto.Hash import MD4
-
-from lil_pwny.exceptions import FileReadError
 
 
 class Hashing(object):
@@ -17,41 +17,35 @@ class Hashing(object):
 
     @staticmethod
     def _hashify(input_string: str) -> str:
-        """Converts the input string to a NTLM hash and returns the hash
+        """ Converts the input string to a NTLM hash and returns the hash
 
         Args:
             input_string: string to be converted to NTLM hash
         Returns:
             Converted NTLM hash
         """
-
         hasher = MD4.new()
         hasher.update(input_string.encode('utf-16le'))
         output = hasher.digest()
         return binascii.hexlify(output).decode('utf-8').upper()
 
-    def get_hashes(self, input_file: str) -> Dict[str, str]:
-        """Reads the input file of passwords, converts them to NTLM hashes
+    def _process_password(self, password: str) -> str:
+        return f'{self._hashify(password)}:0:{password}'
+
+    def get_hashes(self, password_list: List[str]) -> List[str]:
+        """ Converts a list of strings to NTLM hashes using multiprocessing
 
         Args:
-            input_file: file containing strings to convert to NTLM hashes
+            password_list: list of strings to convert to NTLM hashes
         Returns:
-            Dict that replicates HIBP format: 'hash:occurrence_count'
+            List of NTLM hashes of the passwords
         """
-
-        output_dict = {}
-        try:
-            with open(input_file, 'r') as f:
-                for item in f:
-                    if item:
-                        output_dict[self._hashify(item.strip())] = '0'
-        except IOError as e:
-            raise FileReadError(input_file, str(e))
-
-        return output_dict
+        with Pool(cpu_count()) as pool:
+            hashes = pool.map(self._process_password, password_list)
+        return hashes
 
     def obfuscate(self, input_hash: str) -> str:
-        """Further hashes the input NTLM hash with a random salt
+        """ Further hashes the input NTLM hash with a random salt
 
         Args:
             input_hash: hash to be obfuscated

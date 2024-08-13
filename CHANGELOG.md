@@ -1,3 +1,21 @@
+## [3.1.0] - 2024-08-13
+### Added
+- Added new functionality to enhance the custom passwords passed to lil-pwny
+  - Lil Pwny can now take the custom password list and create a number of variations of each password in the list:
+    - Passwords with common 'leetspeak' substitutions (e.g. `P@ssw0rd`)
+    - Uppercase versions of the password, and uppercase first characters (e.g. `PASSWORD`, `Password`)
+    - Passwords with common special characters appended or prepended (e.g. `password!`, `!password`)
+    - Passwords padded with common alphanumeric characters, special characters and repetitions of themselves to make them meet a given minimum length (e.g. `password123!`, `!passwordabc`, `passwordpassword`)
+    - Passwords with dates appended starting from the year 1950 up to 10 years from today's date (e.g. `password1950`, `password2034`)
+  - To give an idea, a password list of 100 custom passwords generates 49848660 variations
+- Logging now includes the plaintext password for custom password list matches
+  - This is useful for identifying the password that was found in the custom password list
+  - These are redacted if the `--obfuscate` flag is used
+
+### Changed
+- `--debug` option switched to `--verbose` to more accurately describe output
+  - Some logging output moved from INFO level to DEBUG (displayed when `--verbose` is passed)
+
 ## [3.0.1] - 2024-07-22
 ### Added
 - Updated logging

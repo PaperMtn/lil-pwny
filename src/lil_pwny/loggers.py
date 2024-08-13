@@ -40,7 +40,7 @@ class StdoutLogger:
             mes_type = 'HIBP'
         if notify_type == "custom":
             message = f'CUSTOM_MATCH: \n' \
-                      f'    ACCOUNT: {message.get("username").lower()} HASH: {message.get("hash")} OBFUSCATED: {message.get("obfuscated")}'
+                      f'    ACCOUNT: {message.get("username").lower()} HASH: {message.get("hash")} PASSWORD: {message.get("plaintext_password")} OBFUSCATED: {message.get("obfuscated")}'
             mes_type = 'CUSTOM'
         if notify_type == "duplicate":
             message = 'DUPLICATE: \n' \
@@ -98,6 +98,12 @@ class StdoutLogger:
                 key_color = Fore.YELLOW
                 style = Style.NORMAL
                 mes_type = '!'
+            elif mes_type == "SUCCESS":
+                base_color = Fore.LIGHTGREEN_EX
+                high_color = Fore.LIGHTGREEN_EX
+                key_color = Fore.LIGHTGREEN_EX
+                style = Style.NORMAL
+                mes_type = '>>'
             elif mes_type == "DUPLICATE":
                 base_color = Fore.LIGHTGREEN_EX
                 high_color = Fore.LIGHTGREEN_EX
