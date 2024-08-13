@@ -38,10 +38,14 @@ Because it uses multiprocessing, the more cores you have available, the faster L
     - 12 logical cores - 0:04:28.579201
 
 ## Output
-Lil Pwny will output results as either to stdout or JSON:
+Lil Pwny will output results as either to stdout:
+
+<img src="./images/stdout-screenshot.png" width="675">
+
+or JSON:
 
 ```json
-{"localtime": "2021-00-00 00:00:00,000", "level": "NOTIFY", "source": "Lil Pwny", "match_type": "hibp", "detection_data": {"username": "RICKON.STARK", "hash": "0C02C50B2B08F2979DFDE12EDA472FC1", "matches_in_hibp": "24230577", "obfuscated": "True"}}
+{"localtime": "2021-00-00 00:00:00,000", "level": "NOTIFY", "source": "Lil Pwny", "match_type": "hibp", "detection_data": {"username": "RICKON.STARK", "hash": "32ED87BDB5FDC5E9CBA88547376818D4", "matches_in_hibp": "24230577", "obfuscated": "True"}}
 ```
 You can redirect the JSON output of Lil Pwny to file:
 ```commandline

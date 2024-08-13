@@ -1,4 +1,4 @@
-## [3.1.0] - 2024-08-12
+## [3.1.0] - 2024-08-13
 ### Added
 - Added new functionality to enhance the custom passwords passed to lil-pwny
   - Lil Pwny can now take the custom password list and create a number of variations of each password in the list:
