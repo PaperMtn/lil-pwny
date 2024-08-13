@@ -12,6 +12,10 @@
   - This is useful for identifying the password that was found in the custom password list
   - These are redacted if the `--obfuscate` flag is used
 
+### Changed
+- `--debug` option switched to `--verbose` to more accurately describe output
+  - Some logging output moved from INFO level to DEBUG (displayed when `--verbose` is passed)
+
 ## [3.0.1] - 2024-07-22
 ### Added
 - Updated logging
