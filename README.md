@@ -64,7 +64,7 @@ pip install lil-pwny
 Lil-pwny will be installed as a global command, use as follows:
 
 ```
-usage: lil-pwny [-h] -hibp HIBP [-v] [-c CUSTOM] [-custom-enhance CUSTOM_ENHANCE] -ad AD_HASHES [-d] [-output {file,stdout,json}] [-o] [--debug]
+usage: lil-pwny [-h] -hibp HIBP [-v] [-c CUSTOM] [-custom-enhance CUSTOM_ENHANCE] -ad AD_HASHES [-d] [-output {file,stdout,json}] [-o] [--verbose]
 
 Fast offline auditing of Active Directory passwords using Python
 
@@ -76,14 +76,16 @@ options:
   -c CUSTOM, --custom CUSTOM
                         .txt file containing additional custom passwords to check for
   -custom-enhance CUSTOM_ENHANCE, --custom-enhance CUSTOM_ENHANCE
-                        generate an enhanced custom password list based on the provided custom password list. Must be used with -c/--custom flag. The enhanced list will stored in memory and not written to disk. Provide the minimum length of the passwords you want. Default is 8
+                        generate an enhanced custom password list based on the provided custom password list. Must be used with -c/--custom flag. The enhanced list will stored in memory and not
+                        written to disk. Provide the minimum length of the passwords you want. Default is 8
   -ad AD_HASHES, --ad-hashes AD_HASHES
                         The .txt file containing NTLM hashes from AD users
   -d, --duplicates      Output a list of duplicate password users
   -output {file,stdout,json}, --output {file,stdout,json}
                         Where to send results
   -o, --obfuscate       Obfuscate hashes from discovered matches by hashing with a random salt
-  --debug               Turn on debug level logging
+  --verbose             Turn on verbose logging
+
 ```
 
 Example:
