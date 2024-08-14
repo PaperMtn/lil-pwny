@@ -6,9 +6,11 @@ import time
 import traceback
 from datetime import timedelta
 from importlib import metadata
+from typing import List, Dict
 
 from lil_pwny import password_audit, hashing
-from lil_pwny.custom_password_enhancer import CustomPasswordEnhancer
+from lil_pwny.variant_generators.custom_variant_generator import CustomVariantGenerator
+from lil_pwny.variant_generators.username_variant_generator import UsernameVariantGenerator
 from lil_pwny.exceptions import FileReadError
 from lil_pwny.loggers import JSONLogger, StdoutLogger
 
@@ -40,18 +42,58 @@ def get_readable_file_size(file_path: str) -> str:
     """
 
     file_size_bytes = os.path.getsize(file_path)
+    for unit in ['bytes', 'KB', 'MB', 'GB']:
+        if file_size_bytes < 1024:
+            return f'{file_size_bytes:.2f} {unit}'
+        file_size_bytes /= 1024
 
-    if file_size_bytes < 1024:  # Less than 1 KB
-        return f"{file_size_bytes} bytes"
-    elif file_size_bytes < 1024 ** 2:  # Less than 1 MB
-        file_size_kb = file_size_bytes / 1024
-        return f"{file_size_kb:.2f} KB"
-    elif file_size_bytes < 1024 ** 3:  # Less than 1 GB
-        file_size_mb = file_size_bytes / (1024 ** 2)
-        return f"{file_size_mb:.2f} MB"
-    else:  # 1 GB or more
-        file_size_gb = file_size_bytes / (1024 ** 3)
-        return f"{file_size_gb:.2f} GB"
+
+def write_hash_temp_file(hash_list: List[str]) -> str:
+    """ Writes a list of hashes to a temporary file and returns the file path.
+
+        Args:
+            hash_list: A list of hash strings to be written to the temporary file.
+        Returns:
+            str: The file path of the temporary file containing the hashes.
+    """
+
+    with tempfile.NamedTemporaryFile('w', delete=False) as temp_file:
+        temp_file.write('\n'.join(hash_list))
+    return temp_file.name
+
+
+def find_matches(log_handler: JSONLogger or StdoutLogger,
+                 filepath: str,
+                 ad_user_hashes: Dict[str, List[str]],
+                 finding_type: str,
+                 obfuscated: bool,
+                 logging_type: str) -> int:
+    """ Searches for matches between Active Directory user hashes and a provided hash file, logs the results,
+        and returns the number of matches found.
+
+        Args:
+            log_handler: The logger instance used to log messages.
+            filepath: The path to the file containing the hash data to compare against.
+            ad_user_hashes: A dictionary of NTLM hashes from Active Directory users.
+            finding_type: The type of match being searched for (e.g., 'hibp', 'custom', 'username').
+            obfuscated: Whether to obfuscate the matches found by hashing with a random salt.
+            logging_type: The type of logging output to use ('stdout', 'json', etc.).
+        Returns:
+            The number of matches found.
+    """
+
+    matches = password_audit.search(
+        log_handler=log_handler,
+        hibp_hashes_filepath=filepath,
+        ad_user_hashes=ad_user_hashes,
+        finding_type=finding_type,
+        obfuscated=obfuscated)
+    number_of_matches = len(matches)
+    if logging_type != 'stdout':
+        for match in matches:
+            log_handler.log('NOTIFY', match, notify_type=finding_type)
+
+    return number_of_matches
 
 
 def main():
@@ -143,6 +185,22 @@ def main():
             logger.log('CRITICAL', f'Error loading AD user hashes: {str(e)}')
             sys.exit(1)
 
+        # Check username variations
+        logger.log('SUCCESS', f'Finding users using passwords that are a variation of their username...')
+        username_variants = UsernameVariantGenerator().generate_variations(ad_users)
+        logger.log('DEBUG', f'{len(username_variants)} username variants generated ')
+        username_hashes = hasher.get_hashes(username_variants)
+        logger.log('DEBUG', f'Converting username variants to NTLM hashes ')
+        username_temp_filepath = write_hash_temp_file(username_hashes)
+
+        username_count = find_matches(
+            log_handler=logger,
+            filepath=username_temp_filepath,
+            ad_user_hashes=ad_users,
+            finding_type='username',
+            obfuscated=obfuscate,
+            logging_type=logging_type)
+
         # Check HIBP file size
         try:
             logger.log('SUCCESS', f'Size of HIBP file provided {get_readable_file_size(hibp_file)}')
@@ -153,16 +211,13 @@ def main():
         # Compare AD users against HIBP hashes
         logger.log('SUCCESS', f'Comparing {ad_lines} AD users against HIBP compromised passwords...')
         try:
-            hibp_results = password_audit.search(
+            hibp_count = find_matches(
                 log_handler=logger,
-                hibp_hashes_filepath=hibp_file,
+                filepath=hibp_file,
                 ad_user_hashes=ad_users,
                 finding_type='hibp',
-                obfuscated=obfuscate)
-            hibp_count = len(hibp_results)
-            if logging_type != 'stdout':
-                for hibp_match in hibp_results:
-                    logger.log('NOTIFY', hibp_match, notify_type='hibp')
+                obfuscated=obfuscate,
+                logging_type=logging_type)
         except FileNotFoundError as e:
             logger.log('CRITICAL', f'HIBP file not found: {e.filename}')
             sys.exit(1)
@@ -183,66 +238,53 @@ def main():
                     custom_count = 0
                     variants_count = 0
                     logger.log('INFO', 'Enhancing custom password list by adding variations...')
-                    custom_client = CustomPasswordEnhancer(min_password_length=int(custom_enhance))
+                    custom_client = CustomVariantGenerator(min_password_length=int(custom_enhance))
                     for custom_pwd in custom_passwords:
                         logger.log('DEBUG', f'Generating variants for `{custom_pwd}`...')
                         temp_custom_passwords = custom_client.enhance_password(custom_pwd)
+
                         logger.log('DEBUG', 'Converting custom passwords to NTLM hashes...')
                         custom_password_hashes = hasher.get_hashes(temp_custom_passwords)
                         variants_count += len(custom_password_hashes)
                         logger.log('SUCCESS', f'Generated {len(custom_password_hashes)} variants for `{custom_pwd}`')
-                        with tempfile.NamedTemporaryFile('w', delete=False) as temp_file:
-                            for h in custom_password_hashes:
-                                temp_file.write(f'{h}\n')
-                            temp_file_path = temp_file.name
-                        logger.log('DEBUG', f'Custom hashes written to temp file {temp_file_path}')
 
+                        custom_temp_file_path = write_hash_temp_file(custom_password_hashes)
+                        logger.log('DEBUG', f'Custom hashes written to temp file {custom_temp_file_path}')
                         logger.log('INFO', f'Comparing {ad_lines} Active Directory'
                                            f' users against {len(custom_password_hashes)} custom password hashes...')
-                        custom_matches = password_audit.search(
+
+                        custom_count += find_matches(
                             log_handler=logger,
-                            hibp_hashes_filepath=temp_file_path,
+                            filepath=custom_temp_file_path,
                             ad_user_hashes=ad_users,
                             finding_type='custom',
-                            obfuscated=obfuscate)
-                        os.remove(temp_file_path)
-                        logger.log('DEBUG', f'Temp file {temp_file_path} deleted')
-                        custom_count += len(custom_matches)
-                        if logging_type != 'stdout':
-                            for result in custom_matches:
-                                logger.log('NOTIFY', result, notify_type='custom')
+                            obfuscated=obfuscate,
+                            logging_type=logging_type)
+                        os.remove(custom_temp_file_path)
+                        logger.log('DEBUG', f'Temp file {custom_temp_file_path} deleted')
                 else:
                     logger.log('DEBUG', 'Converting custom passwords to NTLM hashes...')
                     custom_password_hashes = hasher.get_hashes(custom_passwords)
-                    with tempfile.NamedTemporaryFile('w', delete=False) as temp_file:
-                        for h in custom_password_hashes:
-                            temp_file.write(f'{h}\n')
-                        temp_file_path = temp_file.name
-                    logger.log('DEBUG', f'Custom hashes written to temp file {temp_file_path}')
+                    custom_temp_file_path = write_hash_temp_file(custom_password_hashes)
+                    logger.log('DEBUG', f'Custom hashes written to temp file {custom_temp_file_path}')
 
                     logger.log('INFO', f'Comparing {ad_lines} Active Directory'
                                        f' users against {len(custom_password_hashes)} custom password hashes...')
-                    custom_matches = password_audit.search(
+                    custom_count += find_matches(
                         log_handler=logger,
-                        hibp_hashes_filepath=temp_file_path,
+                        filepath=custom_temp_file_path,
                         ad_user_hashes=ad_users,
                         finding_type='custom',
-                        obfuscated=obfuscate)
-                    os.remove(temp_file_path)
-                    logger.log('DEBUG', f'Temp file {temp_file_path} deleted')
-                    custom_count = len(custom_matches)
-                    if logging_type != 'stdout':
-                        for result in custom_matches:
-                            logger.log('NOTIFY', result, notify_type='custom')
+                        obfuscated=obfuscate,
+                        logging_type=logging_type)
+                    os.remove(custom_temp_file_path)
+                    logger.log('DEBUG', f'Temp file {custom_temp_file_path} deleted')
             except FileNotFoundError as e:
                 logger.log('CRITICAL', f'Custom password file not found: {e.filename}')
                 sys.exit(1)
             except Exception as e:
                 logger.log('CRITICAL', f'Error during custom password search: {str(e)}')
                 sys.exit(1)
-            finally:
-                if os.path.exists(temp_file_path):
-                    os.remove(temp_file_path)
 
         # Handle duplicates if requested
         duplicate_count = 0
@@ -262,6 +304,7 @@ def main():
 
         logger.log('SUCCESS', 'Audit completed')
         logger.log('SUCCESS', f'Total compromised passwords: {total_comp_count}')
+        logger.log('SUCCESS', f'Passwords matching a variation of the username: {username_count}')
         logger.log('SUCCESS', f'Passwords matching HIBP: {hibp_count}')
         logger.log('SUCCESS', f'Passwords matching custom password dictionary: {custom_count}')
         if custom_enhance:
