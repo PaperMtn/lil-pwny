@@ -42,6 +42,10 @@ class StdoutLogger:
             message = f'CUSTOM_MATCH: \n' \
                       f'    ACCOUNT: {message.get("username").lower()} HASH: {message.get("hash")} PASSWORD: {message.get("plaintext_password")} OBFUSCATED: {message.get("obfuscated")}'
             mes_type = 'CUSTOM'
+        if notify_type == "username":
+            message = f'USERNAME_MATCH: \n' \
+                      f'    ACCOUNT: {message.get("username").lower()} HASH: {message.get("hash")} PASSWORD: {message.get("plaintext_password")} OBFUSCATED: {message.get("obfuscated")}'
+            mes_type = 'USERNAME'
         if notify_type == "duplicate":
             message = 'DUPLICATE: \n' \
                       f'    ACCOUNTS: {message.get("users")} HASH: {message.get("hash")} OBFUSCATED: {message.get("obfuscated")}'
@@ -114,6 +118,12 @@ class StdoutLogger:
                 base_color = Fore.YELLOW
                 high_color = Fore.YELLOW
                 key_color = Fore.YELLOW
+                style = Style.NORMAL
+                mes_type = '!'
+            elif mes_type == "USERNAME":
+                base_color = Fore.BLUE
+                high_color = Fore.BLUE
+                key_color = Fore.BLUE
                 style = Style.NORMAL
                 mes_type = '!'
 
