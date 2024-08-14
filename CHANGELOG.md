@@ -1,3 +1,16 @@
+## [3.2.0] - 2024-08-14
+### Added
+- Functionality to search for users who are using their username as the password
+  - Converts the users username into the following formats:
+    - All uppercase
+    - All lowercase
+    - Remove dot "."
+    - camelCase (E.g. johnSmith)
+    - PascalCase (E.g. JohnSmith)
+
+### Fixed
+- SUCCESS level logging not properly working for JSON output
+
 ## [3.1.0] - 2024-08-13
 ### Added
 - Added new functionality to enhance the custom passwords passed to lil-pwny

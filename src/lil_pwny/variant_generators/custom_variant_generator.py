@@ -2,7 +2,7 @@ from typing import List
 from datetime import datetime
 
 
-class CustomPasswordEnhancer:
+class CustomVariantGenerator:
     """ Enhances the custom password with additional variations
     """
 

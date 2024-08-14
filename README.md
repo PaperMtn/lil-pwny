@@ -17,6 +17,7 @@ More information about Lil Pwny can be found [on my blog](https://papermtn.co.uk
 - **Custom Password Auditing**: Ability to provide a list of your own custom passwords to check AD users against. This allows you to check user passwords against passwords relevant to your organisation that you suspect people might be using. 
   - Pass a .txt file with the plaintext passwords you want to search for, these are then NTLM hashed and AD hashes are then compared with this as well as the HIBP hashes.
 - **Detect Duplicates**: Return a list of accounts using the same passwords. Useful for finding users using the same password for their administrative and standard accounts.
+- **Username as Password**: Detect users that are using their username, or variations of it, as their password.
 - **Obfuscated Output**: Obfuscate hashes in output, for if you don't want to handle or store live user NTLM hashes.
 
 ### Custom Password List Enhancement
@@ -29,6 +30,20 @@ Lil Pwny provides the functionality to enhance your custom password list by addi
 - Passwords with dates appended starting from the year 1950 up to 10 years from today's date (e.g. `password1950`, `password2034`)
 
 A custom password list of 100 plaintext passwords generates 49848660 variations.
+
+### Usernames in Passwords
+Lil Pwny looks for users that are using variations of their username as their password.
+
+It converts the users username into the following formats:
+
+- All uppercase
+- All lowercase
+- Remove dot "."
+- camelCase (E.g. johnSmith)
+- PascalCase (E.g. JohnSmith)
+
+These are then converted to NTLM hashes, and audited against the AD hashes
+
 ## Resources
 This application has been developed to make the most of multiprocessing in Python, with the aim of it working as fast as possible on consumer level hardware.
 
