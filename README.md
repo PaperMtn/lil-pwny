@@ -35,11 +35,12 @@ A custom password list of 100 plaintext passwords generates 49848660 variations.
 Lil Pwny looks for users that are using variations of their username as their password.
 
 It converts the users username into the following formats:
-    - All uppercase
-    - All lowercase
-    - Remove dot "."
-    - camelCase (E.g. johnSmith)
-    - PascalCase (E.g. JohnSmith)
+
+- All uppercase
+- All lowercase
+- Remove dot "."
+- camelCase (E.g. johnSmith)
+- PascalCase (E.g. JohnSmith)
 
 These are then converted to NTLM hashes, and audited against the AD hashes
 
