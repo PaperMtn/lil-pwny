@@ -205,6 +205,9 @@ class JSONLogger(Logger):
         self.notify_format = logging.Formatter(
             '{"localtime": "%(asctime)s", "level": "NOTIFY", "source": "%(name)s", "match_type": "%(type)s", '
             '"detection_data": %(message)s}')
+        self.success_format = logging.Formatter(
+            '{"localtime": "%(asctime)s", "level": "SUCCESS", "source": "%(name)s", '
+            '"detection_data": %(message)s}')
         self.info_format = logging.Formatter(
             '{"localtime": "%(asctime)s", "level": "%(levelname)s", "source": "%(name)s", "message":'
             ' %(message)s}')
@@ -225,6 +228,11 @@ class JSONLogger(Logger):
     def log(self, level: str, log_data: str or Dict, **kwargs):
         if level.upper() == 'NOTIFY':
             self.handler.setFormatter(self.notify_format)
+            self.logger.info(
+                json.dumps(log_data, cls=EnhancedJSONEncoder),
+                extra={'type': kwargs.get('notify_type', '')})
+        elif level.upper() == 'SUCCESS':
+            self.handler.setFormatter(self.success_format)
             self.logger.info(
                 json.dumps(log_data, cls=EnhancedJSONEncoder),
                 extra={'type': kwargs.get('notify_type', '')})
